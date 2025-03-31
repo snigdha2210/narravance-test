@@ -78,6 +78,9 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
         }
         const data = await response.json();
         console.log("Fetched orders:", data);
+        console.log("Unique source values:", [
+          ...new Set(data.map((o: Order) => o.source)),
+        ]);
         setOrders(data);
       } catch (err) {
         console.error("Error fetching orders:", err);
@@ -91,7 +94,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   }, [taskId]);
 
   const filterData = (data: Order[]) => {
-    return data.filter((order) => {
+    const filtered = data.filter((order) => {
       const orderDate = new Date(order.order_date);
       const now = new Date();
       const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
@@ -109,6 +112,8 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
       return dateMatch && sourceMatch && categoryMatch;
     });
+    console.log("Filtered orders:", filtered);
+    return filtered;
   };
 
   const prepareTimeSeriesData = (orders: Order[]) => {
@@ -120,6 +125,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
     // Sort by date
     timeSeriesData.sort((a, b) => a.date.getTime() - b.date.getTime());
+    console.log("Time series data before grouping:", timeSeriesData);
 
     // Group by date and source
     const groupedData = timeSeriesData.reduce((acc, curr) => {
@@ -131,11 +137,17 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
           source_b: 0,
         };
       }
-      acc[date][curr.source] += curr.amount;
+      if (curr.source === "source_a") {
+        acc[date].source_a += curr.amount;
+      } else if (curr.source === "source_b") {
+        acc[date].source_b += curr.amount;
+      }
       return acc;
     }, {} as Record<string, { date: string; source_a: number; source_b: number }>);
 
-    return Object.values(groupedData);
+    const result = Object.values(groupedData);
+    console.log("Time series data after grouping:", result);
+    return result;
   };
 
   const prepareCategoryData = (orders: Order[]) => {
@@ -148,7 +160,11 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
           source_b: 0,
         };
       }
-      acc[category][order.source] += order.total_amount;
+      if (order.source === "source_a") {
+        acc[category].source_a += order.total_amount;
+      } else if (order.source === "source_b") {
+        acc[category].source_b += order.total_amount;
+      }
       return acc;
     }, {} as Record<string, { category: string; source_a: number; source_b: number }>);
 
@@ -240,8 +256,8 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 label='Source'
               >
                 <MenuItem value='all'>All Sources</MenuItem>
-                <MenuItem value='source_a'>Source A</MenuItem>
-                <MenuItem value='source_b'>Source B</MenuItem>
+                <MenuItem value='source_a'>Shopify</MenuItem>
+                <MenuItem value='source_b'>Etsy</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -288,13 +304,13 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                   type='monotone'
                   dataKey='source_a'
                   stroke='#8884d8'
-                  name='Source A Sales ($)'
+                  name='Shopify Sales ($)'
                 />
                 <Line
                   type='monotone'
                   dataKey='source_b'
                   stroke='#82ca9d'
-                  name='Source B Sales ($)'
+                  name='Etsy Sales ($)'
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -317,13 +333,9 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 <Bar
                   dataKey='source_a'
                   fill='#8884d8'
-                  name='Source A Sales ($)'
+                  name='Shopify Sales ($)'
                 />
-                <Bar
-                  dataKey='source_b'
-                  fill='#82ca9d'
-                  name='Source B Sales ($)'
-                />
+                <Bar dataKey='source_b' fill='#82ca9d' name='Etsy Sales ($)' />
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -348,7 +360,9 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 <TableBody>
                   {sourceData.map((source) => (
                     <TableRow key={source.source}>
-                      <TableCell>{source.source}</TableCell>
+                      <TableCell>
+                        {source.source === "source_a" ? "Shopify" : "Etsy"}
+                      </TableCell>
                       <TableCell align='right'>
                         {source.total.toFixed(2)}
                       </TableCell>

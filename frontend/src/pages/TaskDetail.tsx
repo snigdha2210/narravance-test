@@ -79,6 +79,8 @@ const TaskDetail: React.FC = () => {
 
   console.log("Task status:", task.status);
   console.log("Task completed_at:", task.completed_at);
+  console.log("Categories:", task.source_a_filters.categories);
+  console.log("Categories:", task.source_b_filters.categories);
 
   return (
     <Box sx={{ mt: 4 }}>
@@ -107,6 +109,13 @@ const TaskDetail: React.FC = () => {
               <Typography variant='subtitle2' color='text.secondary'>
                 Created: {formatDate(task.created_at, true)}
               </Typography>
+              {(task.source_a_filters.categories.length > 0 ||
+                task.source_b_filters.categories.length > 0) && (
+                <Typography variant='subtitle2' color='text.secondary'>
+                  Categories: {task.source_a_filters.categories.join(", ")}{" "}
+                  {task.source_b_filters.categories.join(", ")}
+                </Typography>
+              )}
               {task.date_from && (
                 <Typography variant='subtitle2' color='text.secondary'>
                   Date Range: {formatDate(task.date_from)} -{" "}

@@ -154,7 +154,8 @@ class TaskProcessor:
                 if categories and order['product_category'] not in categories:
                     continue
                 
-                # Convert numeric fields to proper types
+                # Convert numeric fields 
+                # to proper types
                 order['quantity'] = int(order['quantity'])
                 order['unit_price'] = float(order['unit_price'])
                 order['total_amount'] = float(order['total_amount'])

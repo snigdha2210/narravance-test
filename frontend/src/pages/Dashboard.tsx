@@ -125,7 +125,7 @@ const Dashboard: React.FC = () => {
           <Button
             variant='contained'
             color='primary'
-            onClick={() => navigate("/tasks")}
+            onClick={() => navigate("/create")}
             sx={{ mt: 2 }}
           >
             Create New Task
