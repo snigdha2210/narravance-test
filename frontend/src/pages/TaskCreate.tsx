@@ -70,11 +70,17 @@ const TaskCreate: React.FC = () => {
     }
   };
 
+  const formatInput = (value: string): string => {
+    const trimmed = value.trimStart(); // remove leading space
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  };
+
   const handleTextChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const formattedValue = formatInput(value);
+    setFormData((prev) => ({ ...prev, [name]: formattedValue }));
   };
 
   const handleSourceToggle = (source: "source_a" | "source_b") => {

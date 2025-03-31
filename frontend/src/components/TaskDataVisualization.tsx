@@ -29,10 +29,30 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Order } from "../types";
+import { styled, alpha } from "@mui/material/styles";
 
 interface TaskDataVisualizationProps {
   taskId: number;
 }
+
+const StyledTableRow = styled(TableRow)<{ source: string }>(
+  ({ theme, source }) => ({
+    "backgroundColor":
+      source === "source_a"
+        ? alpha("#8884d8", 0.1) // Same purple as visualization
+        : source === "source_b"
+        ? alpha("#82ca9d", 0.1) // Same green as visualization
+        : "inherit",
+    "&:hover": {
+      backgroundColor:
+        source === "source_a"
+          ? alpha("#8884d8", 0.2)
+          : source === "source_b"
+          ? alpha("#82ca9d", 0.2)
+          : theme.palette.action.hover,
+    },
+  }),
+);
 
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
@@ -369,12 +389,14 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 </TableHead>
                 <TableBody>
                   {detailedTableData.map((order) => (
-                    <TableRow key={order.order_id}>
+                    <StyledTableRow key={order.order_id} source={order.source}>
                       <TableCell>{order.order_id}</TableCell>
                       <TableCell>
                         {new Date(order.order_date).toLocaleDateString()}
                       </TableCell>
-                      <TableCell>{order.source}</TableCell>
+                      <TableCell>
+                        {order.source === "source_a" ? "Shopify" : "Etsy"}
+                      </TableCell>
                       <TableCell>{order.product_name}</TableCell>
                       <TableCell>{order.product_category}</TableCell>
                       <TableCell align='right'>{order.quantity}</TableCell>
@@ -391,7 +413,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                           {JSON.stringify(order.source_specific_data, null, 2)}
                         </pre>
                       </TableCell>
-                    </TableRow>
+                    </StyledTableRow>
                   ))}
                 </TableBody>
               </Table>

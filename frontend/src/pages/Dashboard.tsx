@@ -25,6 +25,7 @@ import {
 import SalesTable from "../components/SalesTable.tsx";
 import { useNavigate } from "react-router-dom";
 import { Order, Task } from "../types.ts";
+import CategorySummary from "../components/CategorySummary.tsx";
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -208,6 +209,9 @@ const Dashboard: React.FC = () => {
               <Typography variant='h4'>
                 ${stats?.averageOrderValue.toFixed(2)}
               </Typography>
+              <Typography variant='body2' color='text.secondary'>
+                {stats?.totalOrders} orders
+              </Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={3}>
@@ -281,7 +285,12 @@ const Dashboard: React.FC = () => {
             </Paper>
           </Grid>
 
-          {/* Sales Table */}
+          {/* Add Category Summary before the orders table */}
+          <Grid item xs={12}>
+            <CategorySummary orders={orders} />
+          </Grid>
+
+          {/* Orders table */}
           <Grid item xs={12}>
             <Paper sx={{ p: 2 }}>
               <Typography variant='h6' gutterBottom>
