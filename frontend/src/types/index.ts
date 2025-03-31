@@ -96,3 +96,38 @@ export interface TopCountry {
   orderCount: number;
   totalSales: number;
 }
+
+// frontend/src/types/charts.ts
+export type ChartType = "line" | "area" | "bar" | "pie";
+export type SortOrder = "asc" | "desc";
+
+export interface ChartConfig {
+  type: ChartType;
+}
+
+export interface TableSortConfig {
+  field: keyof Order;
+  order: SortOrder;
+}
+
+export interface TimeSeriesFilters {
+  sources: string[];
+}
+
+export interface CategoryFilters {
+  source: string;
+  sortBy: "amount" | "count";
+}
+
+export interface DistributionFilters {
+  metric: "orders" | "amount";
+  source: string;
+}
+
+export interface GlobalFilters {
+  dateRange: "all" | "30days" | "custom";
+  source: string;
+  category: string;
+  startDate: Date | null;
+  endDate: Date | null;
+}

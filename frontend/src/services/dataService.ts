@@ -1,6 +1,6 @@
-import { Task } from "../types";
-import { DashboardStats } from "../types";
-import { Order } from "../types";
+import { Task } from "../types/index.ts";
+import { DashboardStats } from "../types/index.ts";
+import { Order } from "../types/index.ts";
 import config from "../config.ts";
 
 export const calculateDashboardStats = (orders: Order[]): DashboardStats => {

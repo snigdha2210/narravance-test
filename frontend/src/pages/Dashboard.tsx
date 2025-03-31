@@ -1,31 +1,30 @@
 import React, { useEffect, useState } from "react";
 import {
   Container,
-  Grid,
-  Paper,
-  Typography,
   Box,
+  Typography,
   CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Button,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  Button,
+  Paper,
+  Grid,
 } from "@mui/material";
 import {
   fetchTasks,
   fetchOrdersByTaskId,
   calculateDashboardStats,
 } from "../services/dataService.ts";
-import SalesTable from "../components/SalesTable.tsx";
 import { useNavigate } from "react-router-dom";
-import { Order, Task } from "../types.ts";
+import { Order, Task } from "../types/index.ts";
+import { DashboardStats } from "../components/DashboardStats.tsx";
 import CategorySummary from "../components/CategorySummary.tsx";
+import SalesTable from "../components/SalesTable.tsx";
 import TaskProgress from "../components/TaskProgress.tsx";
+import TopCategories from "../components/TopCategories.tsx";
+import TopCountries from "../components/TopCountries.tsx";
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -39,12 +38,9 @@ const Dashboard: React.FC = () => {
     const fetchTasksData = async () => {
       try {
         const tasksData = await fetchTasks();
-
         setTasks(tasksData);
-        if (tasksData.length > 0) {
-          if (!selectedTaskId) {
-            setSelectedTaskId(tasksData[0].id);
-          }
+        if (tasksData.length > 0 && !selectedTaskId) {
+          setSelectedTaskId(tasksData[0].id);
         }
       } catch (err) {
         setError("Failed to fetch tasks");
@@ -64,8 +60,6 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       try {
         const data = await fetchOrdersByTaskId(selectedTaskId);
-        console.log("data");
-        console.log(data);
         setOrders(data);
         setError(null);
       } catch (err) {
@@ -155,12 +149,7 @@ const Dashboard: React.FC = () => {
               : "Your task is currently being processed. Please wait for it to complete."}
           </Typography>
           <Box mt={3}>
-            <TaskProgress
-              status={
-                selectedTask.status as "pending" | "in_progress" | "completed"
-              }
-              size='large'
-            />
+            <TaskProgress status={selectedTask.status} size='large' />
           </Box>
         </Paper>
       );
@@ -183,116 +172,26 @@ const Dashboard: React.FC = () => {
     const stats = calculateDashboardStats(orders);
 
     return (
-      <Grid container spacing={3}>
-        {/* Summary Cards */}
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6'>Total Sales</Typography>
-            <Typography variant='h4'>
-              ${stats?.totalSales.toFixed(2)}
-            </Typography>
-            <Typography variant='body2' color='text.secondary'>
-              {stats?.totalOrders} orders
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6'>Average Order Value</Typography>
-            <Typography variant='h4'>
-              ${stats?.averageOrderValue.toFixed(2)}
-            </Typography>
-            <Typography variant='body2' color='text.secondary'>
-              {stats?.totalOrders} orders
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6'>Source A Sales</Typography>
-            <Typography variant='h4'>
-              ${stats?.totalSourceA.toFixed(2)}
-            </Typography>
-            <Typography variant='body2'>
-              {stats?.sourceAOrders} orders
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6'>Source B Sales</Typography>
-            <Typography variant='h4'>
-              ${stats?.totalSourceB.toFixed(2)}
-            </Typography>
-            <Typography variant='body2'>
-              {stats?.sourceBOrders} orders
-            </Typography>
-          </Paper>
+      <Box display='flex' flexDirection='column' gap={3}>
+        <DashboardStats stats={stats} />
+
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <TopCategories stats={stats} />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TopCountries stats={stats} />
+          </Grid>
         </Grid>
 
-        {/* Top Categories */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6' gutterBottom>
-              Top Categories
-            </Typography>
-            <List>
-              {stats?.topCategories.map((category, index) => (
-                <React.Fragment key={category.category}>
-                  <ListItem>
-                    <ListItemText
-                      primary={category.category}
-                      secondary={`${
-                        category.count
-                      } orders - $${category.total.toFixed(2)}`}
-                    />
-                  </ListItem>
-                  {index < stats?.topCategories.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
-
-        {/* Top Countries */}
-        <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6' gutterBottom>
-              Top Countries
-            </Typography>
-            <List>
-              {stats?.topCountries.map((country, index) => (
-                <React.Fragment key={country.country}>
-                  <ListItem>
-                    <ListItemText
-                      primary={country.country}
-                      secondary={`${
-                        country.count
-                      } orders - $${country.total.toFixed(2)}`}
-                    />
-                  </ListItem>
-                  {index < stats?.topCountries.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
-
-        {/* Add Category Summary before the orders table */}
-        <Grid item xs={12}>
-          <CategorySummary orders={orders} />
-        </Grid>
-
-        {/* Orders table */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6' gutterBottom>
-              All Orders ({orders.length})
-            </Typography>
-            <SalesTable orders={orders} />
-          </Paper>
-        </Grid>
-      </Grid>
+        <CategorySummary orders={orders} />
+        <Paper sx={{ p: 2 }}>
+          <Typography variant='h6' gutterBottom>
+            All Orders ({orders.length})
+          </Typography>
+          <SalesTable orders={orders} />
+        </Paper>
+      </Box>
     );
   };
 
@@ -315,7 +214,16 @@ const Dashboard: React.FC = () => {
             >
               {tasks.map((task) => (
                 <MenuItem key={task.id} value={task.id}>
-                  {task.title} ({task.status})
+                  <Typography
+                    sx={{
+                      maxWidth: "180px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {task.title} ({task.status})
+                  </Typography>
                 </MenuItem>
               ))}
             </Select>

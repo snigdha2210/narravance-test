@@ -12,7 +12,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import TaskProgress from "../components/TaskProgress.tsx";
 import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
-import { Task, Order } from "../types.ts";
+import { Task, Order } from "../types/index.ts";
 import { fetchTask, fetchOrdersByTaskId } from "../services/dataService.ts";
 import { formatDateToEST } from "../utils/dateUtils.ts";
 
