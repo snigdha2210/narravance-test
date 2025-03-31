@@ -49,7 +49,7 @@ function App() {
               <Route path='/' element={<Dashboard />} />
               <Route path='/tasks' element={<TaskList />} />
               <Route path='/create' element={<TaskCreate />} />
-              <Route path='/task/:id' element={<TaskDetail />} />
+              <Route path='/tasks/:id' element={<TaskDetail />} />
             </Routes>
           </Container>
         </Router>

@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
             >
               {tasks.map((task) => (
                 <MenuItem key={task.id} value={task.id}>
-                  Task {task.id}
+                  {task.title}
                 </MenuItem>
               ))}
             </Select>
