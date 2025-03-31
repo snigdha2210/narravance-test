@@ -35,7 +35,10 @@ const progressLine = keyframes`
   }
 `;
 
-const ProgressCircle = styled(Box)<{
+const ProgressCircle = styled(Box, {
+  shouldForwardProp: (prop) =>
+    prop !== "active" && prop !== "completed" && prop !== "step",
+})<{
   active: boolean;
   completed: boolean;
   size: "small" | "large";
@@ -67,7 +70,9 @@ const ProgressCircle = styled(Box)<{
   zIndex: 1,
 }));
 
-const ProgressLine = styled(Box)<{
+const ProgressLine = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "active" && prop !== "completed",
+})<{
   active: boolean;
   completed: boolean;
   size: "small" | "large";
@@ -84,7 +89,10 @@ const ProgressLine = styled(Box)<{
   transition: "background-color 0.3s ease",
 }));
 
-const StatusLabel = styled(Typography)<{
+const StatusLabel = styled(Typography, {
+  shouldForwardProp: (prop) =>
+    prop !== "active" && prop !== "completed" && prop !== "step",
+})<{
   active: boolean;
   completed: boolean;
   size: "small" | "large";

@@ -159,7 +159,33 @@ const TaskList: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    {new Date(task.created_at).toLocaleString()}
+                    {(() => {
+                      try {
+                        if (!task.created_at) {
+                          return "N/A";
+                        }
+                        // Parse the UTC date string
+                        const utcDate = new Date(task.created_at + "Z"); // Append Z to ensure UTC interpretation
+                        // Convert to EST
+                        const estDate = new Date(
+                          utcDate.toLocaleString("en-US", {
+                            timeZone: "America/New_York",
+                          }),
+                        );
+                        return estDate.toLocaleString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          timeZone: "America/New_York",
+                          timeZoneName: "short",
+                        });
+                      } catch (error) {
+                        console.error("Error parsing date:", error);
+                        return "N/A";
+                      }
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Button
