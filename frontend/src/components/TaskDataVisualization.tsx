@@ -627,8 +627,16 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
             justifyContent='space-between'
             alignItems='center'
             mb={2}
+            minHeight={40}
           >
-            <Typography variant='h6'>Sales by Category</Typography>
+            <Box
+              minHeight={32}
+              display='flex'
+              alignItems='center'
+              minWidth={200}
+            >
+              <Typography variant='h6'>Sales by Category</Typography>
+            </Box>
             <Box display='flex' gap={2}>
               <FormControl size='small'>
                 <InputLabel>Sort By</InputLabel>

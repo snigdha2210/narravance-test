@@ -6,6 +6,8 @@ import {
   CircularProgress,
   Paper,
   Button,
+  Tooltip,
+  styled,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import TaskProgress from "../components/TaskProgress.tsx";
@@ -13,6 +15,13 @@ import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
 import { Task, Order } from "../types.ts";
 import { fetchTask, fetchOrdersByTaskId } from "../services/dataService.ts";
 import { formatDateToEST } from "../utils/dateUtils.ts";
+
+const TruncatedTitle = styled(Typography)({
+  maxWidth: "calc(100% - 150px)", // Account for button width + spacing
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams();
@@ -114,6 +123,8 @@ const TaskDetail: React.FC = () => {
           <Typography variant='h6' gutterBottom>
             Task Information
           </Typography>
+          <Typography>Title: {task.title}</Typography>
+          <Typography>Description: {task.description}</Typography>
           <Typography>
             Status: <strong>{task.status}</strong>
           </Typography>
@@ -143,9 +154,11 @@ const TaskDetail: React.FC = () => {
         alignItems='center'
         mb={3}
       >
-        <Typography variant='h4'>
-          Task Details {task && `- ${task.title}`}
-        </Typography>
+        <Tooltip title={task?.title || ""} placement='top'>
+          <TruncatedTitle variant='h4'>
+            Task Details {task && `- ${task.title}`}
+          </TruncatedTitle>
+        </Tooltip>
         <Button
           variant='outlined'
           color='primary'

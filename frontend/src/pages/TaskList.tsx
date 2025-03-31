@@ -14,14 +14,68 @@ import {
   CircularProgress,
   TablePagination,
   styled,
+  Tooltip,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
 import { Task } from "../types";
 import config from "../config.ts";
 import { formatDateToEST } from "../utils/dateUtils.ts";
+import SearchIcon from "@mui/icons-material/Search";
 
 const POLLING_INTERVAL = 5000; // Poll every 5 seconds
+
+const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  fontWeight: "bold",
+  whiteSpace: "nowrap",
+  padding: "16px",
+}));
+
+const StyledTableCell = styled(TableCell)({
+  "minWidth": "100px",
+  "padding": "16px",
+  "&.title-cell": {
+    width: "20%",
+    minWidth: "200px",
+    maxWidth: "300px",
+  },
+  "&.description-cell": {
+    width: "20%",
+    minWidth: "200px",
+    maxWidth: "300px",
+  },
+  "&.status-cell": {
+    width: "120px",
+    minWidth: "120px",
+    padding: "8px",
+  },
+  "&.date-cell": {
+    width: "120px",
+    minWidth: "120px",
+    whiteSpace: "nowrap",
+    padding: "8px 16px",
+  },
+  "&.actions-cell": {
+    "width": "100px",
+    "minWidth": "100px",
+    "whiteSpace": "nowrap",
+    "padding": "8px",
+    "& .MuiButton-root": {
+      minWidth: "90px",
+    },
+  },
+});
+
+const TruncatedText = styled(Typography)({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  display: "block",
+});
 
 const TaskList: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -29,6 +83,7 @@ const TaskList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchTasks = async () => {
     if (!loading) setLoading(true);
@@ -84,6 +139,11 @@ const TaskList: React.FC = () => {
     setPage(0);
   };
 
+  // Add search filter function
+  const filteredTasks = tasks.filter((task) =>
+    task.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
   if (loading) {
     return (
       <Box
@@ -110,14 +170,8 @@ const TaskList: React.FC = () => {
     );
   }
 
-  const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-    fontWeight: "bold",
-  }));
-
   return (
-    <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth={false} sx={{ mt: 4, mb: 4, px: 4 }}>
       <Box
         display='flex'
         justifyContent='space-between'
@@ -135,32 +189,74 @@ const TaskList: React.FC = () => {
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      {/* Add search field */}
+      <Box mb={3}>
+        <TextField
+          fullWidth
+          variant='outlined'
+          placeholder='Search tasks by title...'
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position='start'>
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ maxWidth: "400px" }}
+        />
+      </Box>
+
+      <TableContainer
+        component={Paper}
+        sx={{
+          "width": "100%",
+          "overflowX": "auto",
+          "& .MuiTable-root": {
+            // minWidth: "1500px", // Increased minimum width
+          },
+        }}
+      >
         <Table>
           <TableHead>
             <TableRow>
               <StyledTableHeaderCell>Title</StyledTableHeaderCell>
               <StyledTableHeaderCell>Description</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Status</StyledTableHeaderCell>
+              <StyledTableHeaderCell align='center'>
+                Status
+              </StyledTableHeaderCell>
               <StyledTableHeaderCell>Created At</StyledTableHeaderCell>
               <StyledTableHeaderCell>Actions</StyledTableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {tasks
+            {filteredTasks
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((task) => (
                 <TableRow key={task.id}>
-                  <TableCell>{task.title}</TableCell>
-                  <TableCell>{task.description}</TableCell>
-                  <TableCell>
-                    <TaskProgress
-                      status={task.status.toLowerCase() as TaskStatus}
-                      size='small'
-                    />
-                  </TableCell>
-                  <TableCell>{formatDateToEST(task.created_at)}</TableCell>
-                  <TableCell>
+                  <StyledTableCell className='title-cell'>
+                    <Tooltip title={task.title} placement='top'>
+                      <TruncatedText>{task.title}</TruncatedText>
+                    </Tooltip>
+                  </StyledTableCell>
+                  <StyledTableCell className='description-cell'>
+                    <Tooltip title={task.description} placement='top'>
+                      <TruncatedText>{task.description}</TruncatedText>
+                    </Tooltip>
+                  </StyledTableCell>
+                  <StyledTableCell className='status-cell' align='center'>
+                    <Box display='flex' justifyContent='center'>
+                      <TaskProgress
+                        status={task.status.toLowerCase() as TaskStatus}
+                        size='small'
+                      />
+                    </Box>
+                  </StyledTableCell>
+                  <StyledTableCell className='date-cell'>
+                    {formatDateToEST(task.created_at)}
+                  </StyledTableCell>
+                  <StyledTableCell className='actions-cell'>
                     <Button
                       component={RouterLink}
                       to={`/tasks/${task.id}`}
@@ -169,7 +265,7 @@ const TaskList: React.FC = () => {
                     >
                       View Details
                     </Button>
-                  </TableCell>
+                  </StyledTableCell>
                 </TableRow>
               ))}
           </TableBody>
@@ -177,7 +273,7 @@ const TaskList: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component='div'
-          count={tasks.length}
+          count={filteredTasks.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}
