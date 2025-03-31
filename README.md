@@ -121,13 +121,7 @@ The frontend application will start at `http://localhost:3000`
 - `POST /api/tasks` - Create a new task
 - `GET /api/tasks` - List all tasks
 - `GET /api/tasks/{task_id}` - Get a specific task
-- `GET /api/tasks/{task_id}/orders` - Get orders for a specific task
-- `POST /api/tasks/{task_id}/process` - Process a task
-
-### Orders
-
-- `GET /api/orders` - List all orders
-- `GET /api/orders/{order_id}` - Get a specific order
+- `GET /api/tasks/{task_id}/data` - Get orders for a specific task
 
 ## Usage
 
