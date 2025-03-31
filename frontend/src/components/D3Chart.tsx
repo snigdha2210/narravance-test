@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import { Paper } from "@mui/material";
+import { formatDateToEST } from "../utils/dateUtils.ts";
 
 interface D3ChartData {
   [key: string]: string | number | undefined;
@@ -26,10 +27,6 @@ interface D3ChartProps {
 const DEFAULT_DATE_RANGE = {
   start: new Date("2015-01-01"),
   end: new Date("2025-03-31"),
-};
-
-const formatDate = (date: Date) => {
-  return d3.timeFormat("%b %d, %Y")(date);
 };
 
 const parseDate = (dateStr: string): Date => {
@@ -64,14 +61,17 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
       // Create tooltip
       const tooltip = d3
         .select(tooltipRef.current)
-        .style("position", "absolute")
+        .style("position", "fixed")
         .style("visibility", "hidden")
-        .style("background-color", "white")
+        .style("background-color", "rgba(255, 255, 255, 0.95)")
         .style("border", "1px solid #ddd")
-        .style("border-radius", "4px")
-        .style("padding", "10px")
-        .style("box-shadow", "0 2px 4px rgba(0,0,0,0.1)")
-        .style("z-index", "1000");
+        .style("border-radius", "6px")
+        .style("padding", "12px")
+        .style("box-shadow", "0 4px 8px rgba(0,0,0,0.2)")
+        .style("z-index", "9999")
+        .style("pointer-events", "none")
+        .style("font-size", "14px")
+        .style("min-width", "200px");
 
       const svg = d3.select(svgRef.current);
       const innerWidth = width - margin.left - margin.right;
@@ -129,18 +129,31 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
               .style("opacity", 1)
               .attr("transform", "scale(1.05)");
 
+            const total = pieData.reduce(
+              (sum, slice) => sum + (slice.value || 0),
+              0,
+            );
+            const percentage = (((d.value || 0) / total) * 100).toFixed(1);
+
             tooltip
               .style("visibility", "visible")
-              .style("top", `${event.pageY - 10}px`)
-              .style("left", `${event.pageX + 10}px`).html(`
-                <strong>${d.data[xKey]}</strong><br/>
-                ${typeof d.value === "number" ? "$" : ""}${d.value}
+              .style("top", `${event.clientY - 10}px`)
+              .style("left", `${event.clientX + 10}px`).html(`
+                <div style="padding: 8px;">
+                  <div style="font-weight: bold; margin-bottom: 8px; color: #333;">${
+                    d.data[xKey]
+                  }</div>
+                  <div style="margin-bottom: 4px;">Amount: <strong>$${d.value?.toFixed(
+                    2,
+                  )}</strong></div>
+                  <div>Percentage: <strong>${percentage}%</strong></div>
+                </div>
               `);
           })
           .on("mousemove", (event) => {
             tooltip
-              .style("top", `${event.pageY - 10}px`)
-              .style("left", `${event.pageX + 10}px`);
+              .style("top", `${event.clientY - 10}px`)
+              .style("left", `${event.clientX + 10}px`);
           })
           .on("mouseout", function () {
             d3.select(this)
@@ -335,24 +348,33 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
               .on("mouseover", function (event, d) {
                 d3.select(this).transition().duration(200).attr("opacity", 1);
 
+                const sourceLabel = key === "source_a" ? "Shopify" : "Etsy";
+                const dateStr = d.date
+                  ? formatDateToEST(parseDate(d[xKey] as string))
+                  : d[xKey];
+
                 tooltip
                   .style("visibility", "visible")
-                  .style("top", `${event.pageY - 10}px`)
-                  .style("left", `${event.pageX + 10}px`).html(`
-                    <strong>${
-                      d.date
-                        ? formatDate(parseDate(d[xKey] as string))
-                        : d[xKey]
-                    }</strong><br/>
-                    <strong>${
-                      key === "source_a" ? "Shopify" : "Etsy"
-                    }</strong>: $${(Number(d[key]) || 0).toFixed(2)}
+                  .style("top", `${event.clientY - 10}px`)
+                  .style("left", `${event.clientX + 10}px`).html(`
+                    <div style="padding: 8px;">
+                      <div style="font-weight: bold; margin-bottom: 8px; color: #333;">${dateStr}</div>
+                      <div style="margin-bottom: 4px;">${sourceLabel}</div>
+                      <div style="margin-bottom: 4px;">Sales: <strong>$${(
+                        Number(d[key]) || 0
+                      ).toFixed(2)}</strong></div>
+                      ${
+                        d.order_count
+                          ? `<div>Orders: <strong>${d.order_count}</strong></div>`
+                          : ""
+                      }
+                    </div>
                   `);
               })
               .on("mousemove", (event) => {
                 tooltip
-                  .style("top", `${event.pageY - 10}px`)
-                  .style("left", `${event.pageX + 10}px`);
+                  .style("top", `${event.clientY - 10}px`)
+                  .style("left", `${event.clientX + 10}px`);
               })
               .on("mouseout", function () {
                 d3.select(this).transition().duration(200).attr("opacity", 0.8);
@@ -424,16 +446,34 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
                   .attr("r", 6)
                   .style("opacity", 1);
 
+                const sourceLabel = key === "source_a" ? "Shopify" : "Etsy";
+                const dateStr = formatDateToEST(parseDate(d[xKey] as string));
+                const value = Number(d[key]) || 0;
+                const percentageOfTotal = data.reduce(
+                  (total, item) => total + (Number(item[key]) || 0),
+                  0,
+                );
+                const percentage = ((value / percentageOfTotal) * 100).toFixed(
+                  1,
+                );
+
                 tooltip
                   .style("visibility", "visible")
-                  .style("top", `${event.pageY - 10}px`)
-                  .style("left", `${event.pageX + 10}px`).html(`
-                    <strong>${formatDate(
-                      parseDate(d[xKey] as string),
-                    )}</strong><br/>
-                    <strong>${
-                      key === "source_a" ? "Shopify" : "Etsy"
-                    }</strong>: $${(Number(d[key]) || 0).toFixed(2)}
+                  .style("top", `${event.clientY - 10}px`)
+                  .style("left", `${event.clientX + 10}px`).html(`
+                    <div style="padding: 8px;">
+                      <div style="font-weight: bold; margin-bottom: 8px; color: #333;">${dateStr}</div>
+                      <div style="margin-bottom: 4px;">${sourceLabel}</div>
+                      <div style="margin-bottom: 4px;">Sales: <strong>$${value.toFixed(
+                        2,
+                      )}</strong></div>
+                      <div style="margin-bottom: 4px;">% of Total: <strong>${percentage}%</strong></div>
+                      ${
+                        d.order_count
+                          ? `<div>Orders: <strong>${d.order_count}</strong></div>`
+                          : ""
+                      }
+                    </div>
                   `);
               })
               .on("mouseout", function () {

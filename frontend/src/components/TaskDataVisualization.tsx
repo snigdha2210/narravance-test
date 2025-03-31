@@ -16,13 +16,11 @@ import {
   TableRow,
   TableSortLabel,
   styled,
-  useTheme,
   Stack,
   IconButton,
   Tooltip,
   Button,
   ButtonGroup,
-  TextField,
   Modal,
 } from "@mui/material";
 
@@ -76,12 +74,6 @@ interface TableSortConfig {
 }
 
 // Add new interfaces for chart features
-interface ChartAnnotation {
-  x: string;
-  y: number;
-  text: string;
-  color: string;
-}
 
 type ChartType = "line" | "area" | "bar" | "pie";
 
@@ -95,7 +87,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskStartDate,
   taskEndDate,
 }) => {
-  const theme = useTheme();
   const [filters, setFilters] = useState({
     dateRange: "all" as "all" | "30days" | "custom",
     source: "all",
@@ -122,9 +113,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
   // Add new state for chart configuration
   const [chartConfig, setChartConfig] = useState<ChartConfig>({ type: "line" });
-  const [categoryChartConfig, setCategoryChartConfig] = useState<ChartConfig>({
-    type: "bar",
-  });
 
   // Add new state for individual chart filters
   const [timeSeriesFilters, setTimeSeriesFilters] = useState({
@@ -180,41 +168,11 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   ]);
 
   // Get unique sources and categories for filters
-  const sources = useMemo(
-    () => Array.from(new Set(orders.map((order) => order.source))),
-    [orders],
-  );
+
   const categories = useMemo(
     () => Array.from(new Set(orders.map((order) => order.product_category))),
     [orders],
   );
-
-  // Calculate aggregated data for charts
-  const salesByCategory = useMemo(() => {
-    const categoryData = filteredData.reduce((acc, order) => {
-      acc[order.product_category] =
-        (acc[order.product_category] || 0) + order.total_amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(categoryData).map(([category, total]) => ({
-      product_category: category,
-      total_amount: total,
-    }));
-  }, [filteredData]);
-
-  const salesByDate = useMemo(() => {
-    const dateData = filteredData.reduce((acc, order) => {
-      const date = formatDateOnlyToEST(new Date(order.order_date));
-      acc[date] = (acc[date] || 0) + order.total_amount;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(dateData).map(([date, total]) => ({
-      order_date: date,
-      total_amount: total,
-    }));
-  }, [filteredData]);
 
   const prepareTimeSeriesData = (orders: OrderData[]) => {
     const timeSeriesData = orders.map((order) => ({
@@ -372,68 +330,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
       return 0;
     });
-  };
-
-  // Add custom tooltip component for charts
-  interface CustomTooltipProps {
-    active?: boolean;
-    payload?: Array<{
-      name: string;
-      value: number;
-      color: string;
-    }>;
-    label?: string;
-  }
-
-  const CustomTooltip: React.FC<CustomTooltipProps> = ({
-    active,
-    payload,
-    label,
-  }) => {
-    if (active && payload && payload.length) {
-      return (
-        <Paper sx={{ p: 2, backgroundColor: "rgba(255, 255, 255, 0.9)" }}>
-          <Typography variant='body2' color='textSecondary'>
-            {label
-              ? label.includes("-")
-                ? formatDateOnlyToEST(label)
-                : label
-              : ""}
-          </Typography>
-          {payload.map((entry) => (
-            <Typography
-              key={entry.name}
-              variant='body2'
-              color='textPrimary'
-              sx={{ color: entry.color }}
-            >
-              {entry.name}: ${entry.value.toFixed(2)}
-            </Typography>
-          ))}
-        </Paper>
-      );
-    }
-    return null;
-  };
-
-  // Remove the handleAddAnnotation function since we're not using annotations
-  const handleAddAnnotation = (data: any) => {
-    if (!data) return;
-
-    // Get the value based on which source is being displayed
-    const value =
-      data.source_a !== undefined
-        ? data.source_a
-        : data.source_b !== undefined
-        ? data.source_b
-        : data.amount;
-
-    if (value !== undefined && value !== null) {
-      setChartConfig((prev) => ({
-        ...prev,
-        type: prev.type,
-      }));
-    }
   };
 
   // Modify the detailed data table to include sorting

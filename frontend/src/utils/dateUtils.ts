@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { zonedTimeToUtc, utcToZonedTime, getTimezoneOffset } from "date-fns-tz";
+import { utcToZonedTime } from "date-fns-tz";
 
 /**
  * Gets the local timezone string
@@ -20,7 +20,7 @@ export const formatDateToEST = (date: Date | string): string => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
 
     // Convert the UTC date to local timezone
-    const localTz = getLocalTimezone();
+
     const localDate = new Date(
       dateObj.getTime() - dateObj.getTimezoneOffset() * 60000,
     );
