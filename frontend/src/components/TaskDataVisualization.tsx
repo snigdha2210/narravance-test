@@ -39,6 +39,7 @@ import {
   Area,
 } from "recharts";
 import { Order as OrderData } from "../types";
+import { formatDateToEST, formatDateOnlyToEST } from "../utils/dateUtils.ts";
 
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -345,7 +346,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       return (
         <Paper sx={{ p: 2, backgroundColor: "rgba(255, 255, 255, 0.9)" }}>
           <Typography variant='body2' color='textSecondary'>
-            Date: {new Date(label || "").toLocaleDateString()}
+            Date: {formatDateOnlyToEST(label)}
           </Typography>
           {payload.map((entry) => (
             <Typography
@@ -461,9 +462,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               className={order.source === "source_a" ? "source-a" : "source-b"}
             >
               <TableCell>{order.order_id}</TableCell>
-              <TableCell>
-                {new Date(order.order_date).toLocaleDateString()}
-              </TableCell>
+              <TableCell>{formatDateToEST(order.order_date)}</TableCell>
               <TableCell>${order.total_amount.toFixed(2)}</TableCell>
               <TableCell>{order.product_category}</TableCell>
               <TableCell>
@@ -555,7 +554,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               <CartesianGrid strokeDasharray='3 3' />
               <XAxis
                 dataKey='date'
-                tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                tickFormatter={(date) => formatDateOnlyToEST(date)}
               />
               <YAxis />
               <RechartsTooltip content={<CustomTooltip />} />
@@ -608,7 +607,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               <CartesianGrid strokeDasharray='3 3' />
               <XAxis
                 dataKey='date'
-                tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                tickFormatter={(date) => formatDateOnlyToEST(date)}
               />
               <YAxis />
               <RechartsTooltip content={<CustomTooltip />} />
@@ -655,7 +654,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               <CartesianGrid strokeDasharray='3 3' />
               <XAxis
                 dataKey='date'
-                tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                tickFormatter={(date) => formatDateOnlyToEST(date)}
               />
               <YAxis />
               <RechartsTooltip content={<CustomTooltip />} />
@@ -699,7 +698,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       ...filteredData.map((order) =>
         [
           order.order_id,
-          new Date(order.order_date).toLocaleDateString(),
+          formatDateToEST(order.order_date),
           order.total_amount.toFixed(2),
           order.product_category,
           order.source === "source_a" ? "Shopify" : "Etsy",
@@ -793,7 +792,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                         sx={{ ml: 1 }}
                       >
                         Task Selected start date:{" "}
-                        {new Date(taskStartDate).toLocaleDateString()}
+                        {formatDateOnlyToEST(taskStartDate)}
                       </Typography>
                     )}
                   </Box>
@@ -822,7 +821,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                         sx={{ ml: 1 }}
                       >
                         Task Selected end date:{" "}
-                        {new Date(taskEndDate).toLocaleDateString()}
+                        {formatDateOnlyToEST(taskEndDate)}
                       </Typography>
                     )}
                   </Box>

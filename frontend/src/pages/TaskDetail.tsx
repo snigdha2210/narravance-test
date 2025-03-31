@@ -12,6 +12,7 @@ import TaskProgress from "../components/TaskProgress.tsx";
 import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
 import { Task, Order } from "../types.ts";
 import { fetchTask, fetchOrdersByTaskId } from "../services/dataService.ts";
+import { formatDateToEST } from "../utils/dateUtils.ts";
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams();
@@ -116,12 +117,10 @@ const TaskDetail: React.FC = () => {
           <Typography>
             Status: <strong>{task.status}</strong>
           </Typography>
-          <Typography>
-            Created: {new Date(task.created_at).toLocaleString()}
-          </Typography>
+          <Typography>Created: {formatDateToEST(task.created_at)}</Typography>
           {task.completed_at && (
             <Typography>
-              Completed: {new Date(task.completed_at).toLocaleString()}
+              Completed: {formatDateToEST(task.completed_at)}
             </Typography>
           )}
         </Paper>

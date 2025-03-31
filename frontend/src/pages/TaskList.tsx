@@ -19,6 +19,7 @@ import { Link as RouterLink } from "react-router-dom";
 import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
 import { Task } from "../types";
 import config from "../config.ts";
+import { formatDateToEST } from "../utils/dateUtils.ts";
 
 const POLLING_INTERVAL = 5000; // Poll every 5 seconds
 
@@ -158,35 +159,7 @@ const TaskList: React.FC = () => {
                       size='small'
                     />
                   </TableCell>
-                  <TableCell>
-                    {(() => {
-                      try {
-                        if (!task.created_at) {
-                          return "N/A";
-                        }
-                        // Parse the UTC date string
-                        const utcDate = new Date(task.created_at + "Z"); // Append Z to ensure UTC interpretation
-                        // Convert to EST
-                        const estDate = new Date(
-                          utcDate.toLocaleString("en-US", {
-                            timeZone: "America/New_York",
-                          }),
-                        );
-                        return estDate.toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          timeZone: "America/New_York",
-                          timeZoneName: "short",
-                        });
-                      } catch (error) {
-                        console.error("Error parsing date:", error);
-                        return "N/A";
-                      }
-                    })()}
-                  </TableCell>
+                  <TableCell>{formatDateToEST(task.created_at)}</TableCell>
                   <TableCell>
                     <Button
                       component={RouterLink}

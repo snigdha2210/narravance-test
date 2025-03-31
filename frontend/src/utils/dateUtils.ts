@@ -1,39 +1,88 @@
-export const formatDate = (
-  dateString: string | undefined,
-  includeTime: boolean = false,
+/**
+ * Formats a UTC date string to EST/EDT with consistent formatting
+ * @param dateString - UTC date string from the backend
+ * @returns Formatted date string in EST/EDT
+ */
+export const formatDateToEST = (
+  dateString: string | null | undefined,
 ): string => {
-  if (!dateString) return "Present";
   try {
-    // Handle different date string formats
-    let date: Date;
-    if (dateString.includes("T")) {
-      // ISO format
-      date = new Date(dateString);
-    } else if (dateString.includes("-")) {
-      // YYYY-MM-DD format
-      date = new Date(dateString + "T00:00:00");
-    } else {
-      // Try parsing as is
-      date = new Date(dateString);
+    if (!dateString) {
+      return "N/A";
     }
-
-    if (isNaN(date.getTime())) {
-      console.error("Invalid date:", dateString);
-      return "Invalid Date";
-    }
-
-    if (includeTime) {
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const day = date.getDate().toString().padStart(2, "0");
-      const year = date.getFullYear().toString().slice(-2);
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = date.getMinutes().toString().padStart(2, "0");
-      return `${month}/${day}/${year} ${hours}:${minutes}`;
-    }
-
-    return date.toLocaleDateString();
+    // Parse the UTC date string
+    const utcDate = new Date(dateString + "Z"); // Append Z to ensure UTC interpretation
+    // Convert to EST
+    const estDate = new Date(
+      utcDate.toLocaleString("en-US", { timeZone: "America/New_York" }),
+    );
+    return estDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/New_York",
+      timeZoneName: "short",
+    });
   } catch (error) {
-    console.error("Error formatting date:", dateString, error);
-    return "Invalid Date";
+    console.error("Error parsing date:", error);
+    return "N/A";
+  }
+};
+
+/**
+ * Formats a UTC date string to EST/EDT with date only (no time)
+ * @param dateString - UTC date string from the backend
+ * @returns Formatted date string in EST/EDT
+ */
+export const formatDateOnlyToEST = (
+  dateString: string | null | undefined,
+): string => {
+  try {
+    if (!dateString) {
+      return "N/A";
+    }
+    const utcDate = new Date(dateString + "Z");
+    const estDate = new Date(
+      utcDate.toLocaleString("en-US", { timeZone: "America/New_York" }),
+    );
+    return estDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "America/New_York",
+    });
+  } catch (error) {
+    console.error("Error parsing date:", error);
+    return "N/A";
+  }
+};
+
+/**
+ * Formats a UTC date string to EST/EDT with time only (no date)
+ * @param dateString - UTC date string from the backend
+ * @returns Formatted time string in EST/EDT
+ */
+export const formatTimeOnlyToEST = (
+  dateString: string | null | undefined,
+): string => {
+  try {
+    if (!dateString) {
+      return "N/A";
+    }
+    const utcDate = new Date(dateString + "Z");
+    const estDate = new Date(
+      utcDate.toLocaleString("en-US", { timeZone: "America/New_York" }),
+    );
+    return estDate.toLocaleString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "America/New_York",
+      timeZoneName: "short",
+    });
+  } catch (error) {
+    console.error("Error parsing date:", error);
+    return "N/A";
   }
 };
