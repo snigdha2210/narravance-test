@@ -16,6 +16,8 @@ import { formatDate } from "../utils/dateUtils.ts";
 import { Task } from "../types.ts";
 import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
 
+const POLLING_INTERVAL = 5000; // Poll every 5 seconds
+
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "completed":
@@ -35,29 +37,37 @@ const TaskDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTask = async () => {
-      try {
-        console.log("Fetching task with ID:", id);
-        const response = await fetch(`http://localhost:8000/api/tasks/${id}`);
-        if (!response.ok) {
-          throw new Error("Task not found");
-        }
-        const data = await response.json();
-        console.log("Fetched task data:", data);
-        setTask(data);
-      } catch (err) {
-        console.error("Error fetching task:", err);
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchTask = async () => {
+    if (!id) return;
 
-    if (id) {
-      fetchTask();
+    try {
+      const response = await fetch(`http://localhost:8000/api/tasks/${id}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch task");
+      }
+      const data = await response.json();
+      setTask(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      // Only set error if we don't have task data yet
+      if (!task) {
+        setError("Failed to fetch task");
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
+  };
+
+  useEffect(() => {
+    fetchTask();
+
+    // Set up polling
+    const pollInterval = setInterval(fetchTask, POLLING_INTERVAL);
+
+    // Cleanup polling on component unmount
+    return () => clearInterval(pollInterval);
+  }, [id]); // Re-run effect if task ID changes
 
   if (loading) {
     return (

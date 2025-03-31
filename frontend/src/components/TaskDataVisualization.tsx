@@ -82,6 +82,8 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   },
 }));
 
+const POLLING_INTERVAL = 5000; // Poll every 5 seconds
+
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
 }) => {
@@ -95,22 +97,31 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     category: "all",
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await fetchOrdersByTaskId(taskId);
-        setOrders(data);
-        setError(null);
-      } catch (err) {
+  const fetchData = async () => {
+    try {
+      const data = await fetchOrdersByTaskId(taskId);
+      setOrders(data);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      // Only set error if we don't have any data yet
+      if (orders.length === 0) {
         setError("Failed to fetch orders");
-        console.error(err);
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
-  }, [taskId]);
+
+    // Set up polling
+    const pollInterval = setInterval(fetchData, POLLING_INTERVAL);
+
+    // Cleanup polling on component unmount
+    return () => clearInterval(pollInterval);
+  }, [taskId]); // Re-run effect if taskId changes
 
   const filterData = (data: Order[]) => {
     const filtered = data.filter((order) => {

@@ -19,6 +19,9 @@ import { Link as RouterLink } from "react-router-dom";
 import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
 import { Task } from "../types";
 
+const POLLING_INTERVAL = 5000; // Poll every 5 seconds
+const API_BASE_URL = "http://localhost:8000"; // Hardcode the API URL for now
+
 const TaskList: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,31 +29,48 @@ const TaskList: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch("http://localhost:8000/api/tasks");
-        if (!response.ok) {
-          throw new Error("Failed to fetch tasks");
-        }
-        const data = await response.json();
-        // Sort tasks by creation date in descending order (latest first)
-        const sortedTasks = data.sort(
-          (a: Task, b: Task) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        );
-        setTasks(sortedTasks);
-        setError(null);
-      } catch (err) {
-        setError("Failed to fetch tasks");
-        console.error(err);
-      } finally {
-        setLoading(false);
+  const fetchTasks = async () => {
+    if (!loading) setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies if using session-based auth
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to fetch tasks");
       }
-    };
+      const data = await response.json();
+      // Sort tasks by creation date in descending order (latest first)
+      const sortedTasks = data.sort(
+        (a: Task, b: Task) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      setTasks(sortedTasks);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching tasks:", err);
+      // Only set error if we don't have any tasks yet
+      if (tasks.length === 0) {
+        setError(err instanceof Error ? err.message : "Failed to fetch tasks");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTasks();
-  }, []);
+
+    // Set up polling
+    const pollInterval = setInterval(fetchTasks, POLLING_INTERVAL);
+
+    // Cleanup polling on component unmount
+    return () => clearInterval(pollInterval);
+  }, []); // Empty dependency array means this effect runs once on mount
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
