@@ -26,7 +26,8 @@ import SalesTable from "../components/SalesTable.tsx";
 import { useNavigate } from "react-router-dom";
 import { Order, Task } from "../types.ts";
 import CategorySummary from "../components/CategorySummary.tsx";
-import config from "../config";
+import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
+import config from "../config.ts";
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -40,6 +41,10 @@ const Dashboard: React.FC = () => {
     const fetchTasksData = async () => {
       try {
         const tasksData = await fetchTasks();
+        // Filter out tasks that are not completed
+        const completedTasks = tasksData.filter(
+          (task) => task.status === "completed",
+        );
         setTasks(tasksData);
         if (tasksData.length > 0) {
           if (!selectedTaskId) {
@@ -84,37 +89,36 @@ const Dashboard: React.FC = () => {
   };
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId);
-  const stats = orders.length > 0 ? calculateDashboardStats(orders) : null;
 
-  if (loading && tasks.length === 0) {
-    return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='100vh'
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const renderContent = () => {
+    if (loading && tasks.length === 0) {
+      return (
+        <Box
+          display='flex'
+          justifyContent='center'
+          alignItems='center'
+          minHeight='100vh'
+        >
+          <CircularProgress />
+        </Box>
+      );
+    }
 
-  if (error && tasks.length === 0) {
-    return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='100vh'
-      >
-        <Typography color='error'>{error}</Typography>
-      </Box>
-    );
-  }
+    if (error && tasks.length === 0) {
+      return (
+        <Box
+          display='flex'
+          justifyContent='center'
+          alignItems='center'
+          minHeight='100vh'
+        >
+          <Typography color='error'>{error}</Typography>
+        </Box>
+      );
+    }
 
-  if (tasks.length === 0) {
-    return (
-      <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
+    if (tasks.length === 0) {
+      return (
         <Paper sx={{ p: 4, textAlign: "center" }}>
           <Typography variant='h5' gutterBottom>
             No Tasks Available
@@ -132,12 +136,170 @@ const Dashboard: React.FC = () => {
             Create New Task
           </Button>
         </Paper>
-      </Container>
+      );
+    }
+
+    if (!selectedTask) {
+      return (
+        <Typography color='error' align='center'>
+          Selected task not found
+        </Typography>
+      );
+    }
+
+    if (selectedTask.status !== "completed") {
+      return (
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography variant='h6' gutterBottom>
+            Task is{" "}
+            {selectedTask.status === "pending" ? "Pending" : "In Progress"}
+          </Typography>
+          <Typography variant='body1' color='text.secondary'>
+            {selectedTask.status === "pending"
+              ? "Your task is queued and will start processing soon."
+              : "Your task is currently being processed. Please wait for it to complete."}
+          </Typography>
+          <Box mt={3}>
+            <TaskProgress
+              status={
+                selectedTask.status as "pending" | "in_progress" | "completed"
+              }
+              size='large'
+            />
+          </Box>
+        </Paper>
+      );
+    }
+
+    if (orders.length === 0) {
+      return (
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography variant='h6' gutterBottom>
+            No Orders Found
+          </Typography>
+          <Typography variant='body1' color='text.secondary'>
+            This task has completed but no orders were found matching your
+            criteria.
+          </Typography>
+        </Paper>
+      );
+    }
+
+    const stats = calculateDashboardStats(orders);
+
+    return (
+      <Grid container spacing={3}>
+        {/* Summary Cards */}
+        <Grid item xs={12} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6'>Total Sales</Typography>
+            <Typography variant='h4'>
+              ${stats?.totalSales.toFixed(2)}
+            </Typography>
+            <Typography variant='body2' color='text.secondary'>
+              {stats?.totalOrders} orders
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6'>Average Order Value</Typography>
+            <Typography variant='h4'>
+              ${stats?.averageOrderValue.toFixed(2)}
+            </Typography>
+            <Typography variant='body2' color='text.secondary'>
+              {stats?.totalOrders} orders
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6'>Source A Sales</Typography>
+            <Typography variant='h4'>
+              ${stats?.totalSourceA.toFixed(2)}
+            </Typography>
+            <Typography variant='body2'>
+              {stats?.sourceAOrders} orders
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6'>Source B Sales</Typography>
+            <Typography variant='h4'>
+              ${stats?.totalSourceB.toFixed(2)}
+            </Typography>
+            <Typography variant='body2'>
+              {stats?.sourceBOrders} orders
+            </Typography>
+          </Paper>
+        </Grid>
+
+        {/* Top Categories */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6' gutterBottom>
+              Top Categories
+            </Typography>
+            <List>
+              {stats?.topCategories.map((category, index) => (
+                <React.Fragment key={category.category}>
+                  <ListItem>
+                    <ListItemText
+                      primary={category.category}
+                      secondary={`${
+                        category.count
+                      } orders - $${category.total.toFixed(2)}`}
+                    />
+                  </ListItem>
+                  {index < stats?.topCategories.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        {/* Top Countries */}
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6' gutterBottom>
+              Top Countries
+            </Typography>
+            <List>
+              {stats?.topCountries.map((country, index) => (
+                <React.Fragment key={country.country}>
+                  <ListItem>
+                    <ListItemText
+                      primary={country.country}
+                      secondary={`${
+                        country.count
+                      } orders - $${country.total.toFixed(2)}`}
+                    />
+                  </ListItem>
+                  {index < stats?.topCountries.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+
+        {/* Add Category Summary before the orders table */}
+        <Grid item xs={12}>
+          <CategorySummary orders={orders} />
+        </Grid>
+
+        {/* Orders table */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }}>
+            <Typography variant='h6' gutterBottom>
+              All Orders ({orders.length})
+            </Typography>
+            <SalesTable orders={orders} />
+          </Paper>
+        </Grid>
+      </Grid>
     );
-  }
-  console.log(selectedTask);
-  console.log(orders);
-  console.log(orders.length);
+  };
 
   return (
     <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
@@ -158,150 +320,14 @@ const Dashboard: React.FC = () => {
             >
               {tasks.map((task) => (
                 <MenuItem key={task.id} value={task.id}>
-                  {task.title}
+                  {task.title} ({task.status})
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          {stats && (
-            <Chip
-              label={`${stats.dateRange.start} to ${stats.dateRange.end}`}
-              color='primary'
-              variant='outlined'
-            />
-          )}
         </Box>
       </Box>
-
-      {loading ? (
-        <Box display='flex' justifyContent='center' my={4}>
-          <CircularProgress />
-        </Box>
-      ) : orders.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: "center" }}>
-          <Typography variant='h6' gutterBottom>
-            No Orders Available
-          </Typography>
-          <Typography variant='body1' color='text.secondary'>
-            {selectedTask
-              ? selectedTask.status === "completed"
-                ? "This task has completed but no orders were found for the specified date range."
-                : `This task is currently ${selectedTask.status}. Please wait for it to complete.`
-              : "Please select a task to view its orders."}
-          </Typography>
-        </Paper>
-      ) : (
-        <Grid container spacing={3}>
-          {/* Summary Cards */}
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6'>Total Sales</Typography>
-              <Typography variant='h4'>
-                ${stats?.totalSales.toFixed(2)}
-              </Typography>
-              <Typography variant='body2' color='text.secondary'>
-                {stats?.totalOrders} orders
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6'>Average Order Value</Typography>
-              <Typography variant='h4'>
-                ${stats?.averageOrderValue.toFixed(2)}
-              </Typography>
-              <Typography variant='body2' color='text.secondary'>
-                {stats?.totalOrders} orders
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6'>Source A Sales</Typography>
-              <Typography variant='h4'>
-                ${stats?.totalSourceA.toFixed(2)}
-              </Typography>
-              <Typography variant='body2'>
-                {stats?.sourceAOrders} orders
-              </Typography>
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6'>Source B Sales</Typography>
-              <Typography variant='h4'>
-                ${stats?.totalSourceB.toFixed(2)}
-              </Typography>
-              <Typography variant='body2'>
-                {stats?.sourceBOrders} orders
-              </Typography>
-            </Paper>
-          </Grid>
-
-          {/* Top Categories */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6' gutterBottom>
-                Top Categories
-              </Typography>
-              <List>
-                {stats?.topCategories.map((category, index) => (
-                  <React.Fragment key={category.category}>
-                    <ListItem>
-                      <ListItemText
-                        primary={category.category}
-                        secondary={`${
-                          category.count
-                        } orders - $${category.total.toFixed(2)}`}
-                      />
-                    </ListItem>
-                    {index < stats?.topCategories.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-
-          {/* Top Countries */}
-          <Grid item xs={12} md={6}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6' gutterBottom>
-                Top Countries
-              </Typography>
-              <List>
-                {stats?.topCountries.map((country, index) => (
-                  <React.Fragment key={country.country}>
-                    <ListItem>
-                      <ListItemText
-                        primary={country.country}
-                        secondary={`${
-                          country.count
-                        } orders - $${country.total.toFixed(2)}`}
-                      />
-                    </ListItem>
-                    {index < stats?.topCountries.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-              </List>
-            </Paper>
-          </Grid>
-
-          {/* Add Category Summary before the orders table */}
-          <Grid item xs={12}>
-            <CategorySummary orders={orders} />
-          </Grid>
-
-          {/* Orders table */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant='h6' gutterBottom>
-                All Orders ({orders.length})
-              </Typography>
-              <SalesTable orders={orders} />
-            </Paper>
-          </Grid>
-        </Grid>
-      )}
+      {renderContent()}
     </Container>
   );
 };
