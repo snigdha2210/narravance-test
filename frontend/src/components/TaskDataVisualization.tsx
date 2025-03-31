@@ -16,6 +16,7 @@ import {
   TableRow,
   styled,
   useTheme,
+  Stack,
 } from "@mui/material";
 import {
   LineChart,
@@ -31,35 +32,34 @@ import {
 } from "recharts";
 import { Order } from "../types";
 import { styled as muiStyled, alpha } from "@mui/material/styles";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 interface TaskDataVisualizationProps {
   taskId: number;
   orders: Order[];
 }
 
-const StyledTableRow = styled(TableRow)<{ source: string }>(
-  ({ theme, source }) => ({
-    "backgroundColor":
-      source === "source_a"
-        ? theme.palette.sourceA.background
-        : theme.palette.sourceB.background,
+const StyledTableRow = styled(TableRow)(({ theme }) => ({
+  "&.source-a": {
+    "backgroundColor": alpha(theme.palette.sourceA.main, 0.1),
     "&:hover": {
-      backgroundColor:
-        source === "source_a"
-          ? theme.palette.sourceA.light
-          : theme.palette.sourceB.light,
-      opacity: 0.9,
+      backgroundColor: theme.palette.sourceA.light,
     },
-  }),
-);
+  },
+  "&.source-b": {
+    "backgroundColor": alpha(theme.palette.sourceB.main, 0.1),
+    "&:hover": {
+      backgroundColor: theme.palette.sourceB.light,
+    },
+  },
+}));
 
 const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
+  color: theme.palette.common.white,
   fontWeight: "bold",
-  position: "sticky",
-  top: 0,
-  zIndex: 1,
 }));
 
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
@@ -87,9 +87,11 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 }) => {
   const theme = useTheme();
   const [filters, setFilters] = useState({
-    dateRange: "all",
+    dateRange: "custom" as "all" | "30days" | "custom",
     source: "all",
     category: "all",
+    startDate: null as Date | null,
+    endDate: null as Date | null,
   });
 
   const filterData = (data: Order[]) => {
@@ -98,9 +100,17 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       const now = new Date();
       const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
 
-      const dateMatch =
-        filters.dateRange === "all" ||
-        (filters.dateRange === "30days" && orderDate >= thirtyDaysAgo);
+      let dateMatch = true;
+      if (filters.dateRange === "30days") {
+        dateMatch = orderDate >= thirtyDaysAgo;
+      } else if (
+        filters.dateRange === "custom" &&
+        filters.startDate &&
+        filters.endDate
+      ) {
+        dateMatch =
+          orderDate >= filters.startDate && orderDate <= filters.endDate;
+      }
 
       const sourceMatch =
         filters.source === "all" || order.source === filters.source;
@@ -212,17 +222,69 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               <InputLabel>Date Range</InputLabel>
               <Select
                 value={filters.dateRange}
-                onChange={(e) =>
-                  setFilters({ ...filters, dateRange: e.target.value })
-                }
+                onChange={(e) => {
+                  const newDateRange = e.target
+                    .value as typeof filters.dateRange;
+                  setFilters({
+                    ...filters,
+                    dateRange: newDateRange,
+                    startDate:
+                      newDateRange === "custom" ? filters.startDate : null,
+                    endDate: newDateRange === "custom" ? filters.endDate : null,
+                  });
+                }}
                 label='Date Range'
               >
                 <MenuItem value='all'>All Time</MenuItem>
                 <MenuItem value='30days'>Last 30 Days</MenuItem>
+                <MenuItem value='custom'>Custom Range</MenuItem>
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={4}>
+
+          {filters.dateRange === "custom" && (
+            <Grid item xs={12} md={4}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <Stack spacing={2}>
+                  <DatePicker
+                    label='Start Date'
+                    value={filters.startDate}
+                    onChange={(newValue) => {
+                      setFilters({
+                        ...filters,
+                        startDate: newValue,
+                      });
+                    }}
+                    slotProps={{
+                      textField: {
+                        size: "small",
+                        fullWidth: true,
+                      },
+                    }}
+                  />
+                  <DatePicker
+                    label='End Date'
+                    value={filters.endDate}
+                    onChange={(newValue) => {
+                      setFilters({
+                        ...filters,
+                        endDate: newValue,
+                      });
+                    }}
+                    minDate={filters.startDate || undefined}
+                    slotProps={{
+                      textField: {
+                        size: "small",
+                        fullWidth: true,
+                      },
+                    }}
+                  />
+                </Stack>
+              </LocalizationProvider>
+            </Grid>
+          )}
+
+          <Grid item xs={12} md={filters.dateRange === "custom" ? 4 : 4}>
             <FormControl fullWidth>
               <InputLabel>Source</InputLabel>
               <Select
@@ -238,7 +300,8 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} md={4}>
+
+          <Grid item xs={12} md={filters.dateRange === "custom" ? 12 : 4}>
             <FormControl fullWidth>
               <InputLabel>Category</InputLabel>
               <Select
@@ -361,52 +424,39 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
         {/* Detailed Data Table */}
         <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6' gutterBottom>
-              Detailed Order Data
-            </Typography>
-            <StyledTableContainer>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Source</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Date</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Product</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Category</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Quantity</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Unit Price</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Total Amount</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Customer</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Country</StyledTableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {detailedTableData.map((order) => (
-                    <StyledTableRow
-                      key={`${order.source}-${order.order_id}`}
-                      source={order.source}
-                    >
-                      <TableCell>{order.order_id}</TableCell>
-                      <TableCell>
-                        {order.source === "source_a" ? "Shopify" : "Etsy"}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(order.order_date).toLocaleString()}
-                      </TableCell>
-                      <TableCell>{order.product_name}</TableCell>
-                      <TableCell>{order.product_category}</TableCell>
-                      <TableCell>{order.quantity}</TableCell>
-                      <TableCell>${order.unit_price.toFixed(2)}</TableCell>
-                      <TableCell>${order.total_amount.toFixed(2)}</TableCell>
-                      <TableCell>{order.customer_id}</TableCell>
-                      <TableCell>{order.customer_country}</TableCell>
-                    </StyledTableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </StyledTableContainer>
-          </Paper>
+          <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400 }}>
+            <Table stickyHeader>
+              <TableHead>
+                <TableRow>
+                  <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
+                  <StyledTableHeaderCell>Date</StyledTableHeaderCell>
+                  <StyledTableHeaderCell>Amount</StyledTableHeaderCell>
+                  <StyledTableHeaderCell>Category</StyledTableHeaderCell>
+                  <StyledTableHeaderCell>Source</StyledTableHeaderCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filterData(orders).map((order) => (
+                  <StyledTableRow
+                    key={order.order_id}
+                    className={
+                      order.source === "source_a" ? "source-a" : "source-b"
+                    }
+                  >
+                    <TableCell>{order.order_id}</TableCell>
+                    <TableCell>
+                      {new Date(order.order_date).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                    <TableCell>{order.product_category}</TableCell>
+                    <TableCell>
+                      {order.source === "source_a" ? "Shopify" : "Etsy"}
+                    </TableCell>
+                  </StyledTableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Grid>
       </Grid>
     </Box>
