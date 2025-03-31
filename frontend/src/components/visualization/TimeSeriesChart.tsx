@@ -103,7 +103,7 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         >
           <Typography variant='h6'>Sales Over Time</Typography>
           <Box display='flex' gap={2} alignItems='center'>
-            <FormControl size='small'>
+            <FormControl size='small' sx={{ width: 120, height: 32 }}>
               <InputLabel>Source</InputLabel>
               <Select
                 value={

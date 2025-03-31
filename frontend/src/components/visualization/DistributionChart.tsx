@@ -86,10 +86,11 @@ const DistributionChart: React.FC<DistributionChartProps> = ({
           justifyContent='space-between'
           alignItems='center'
           mb={2}
+          height={56}
         >
           <Typography variant='h6'>Sales Distribution</Typography>
           <Box display='flex' gap={2}>
-            <FormControl size='small'>
+            <FormControl size='small' sx={{ width: 120, height: 32 }}>
               <InputLabel>Metric</InputLabel>
               <Select
                 value={distributionFilters.metric}
@@ -104,7 +105,7 @@ const DistributionChart: React.FC<DistributionChartProps> = ({
                 <MenuItem value='amount'>Sales Amount</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size='small'>
+            <FormControl size='small' sx={{ width: 120, height: 32 }}>
               <InputLabel>Source</InputLabel>
               <Select
                 value={distributionFilters.source}

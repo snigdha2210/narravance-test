@@ -91,12 +91,13 @@ const CategoryChart: React.FC<CategoryChartProps> = ({
           alignItems='center'
           mb={2}
           minHeight={40}
+          height={56}
         >
           <Box minHeight={32} display='flex' alignItems='center' minWidth={200}>
             <Typography variant='h6'>Sales by Category</Typography>
           </Box>
           <Box display='flex' gap={2}>
-            <FormControl size='small'>
+            <FormControl size='small' sx={{ width: 120, height: 32 }}>
               <InputLabel>Sort By</InputLabel>
               <Select
                 value={categoryFilters.sortBy}
@@ -111,7 +112,7 @@ const CategoryChart: React.FC<CategoryChartProps> = ({
                 <MenuItem value='count'>Order Count</MenuItem>
               </Select>
             </FormControl>
-            <FormControl size='small'>
+            <FormControl size='small' sx={{ width: 120, height: 32 }}>
               <InputLabel>Source</InputLabel>
               <Select
                 value={categoryFilters.source}
