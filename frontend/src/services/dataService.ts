@@ -1,60 +1,7 @@
 import axios from "axios";
-
-export interface EcommerceSale {
-  id: string;
-  orderId: string;
-  platform: "Etsy" | "Shopify";
-  productName: string;
-  category: string;
-  price: number;
-  quantity: number;
-  totalAmount: number;
-  date: string;
-  customerCountry: string;
-  status: string;
-}
-
-export interface Order {
-  id: number;
-  task_id: number;
-  source: string;
-  order_id: string;
-  order_date: string;
-  product_name: string;
-  product_category: string;
-  quantity: number;
-  unit_price: number;
-  total_amount: number;
-  customer_id: string;
-  customer_country: string;
-  source_specific_data: string;
-}
-
-export interface DashboardStats {
-  totalSales: number;
-  totalOrders: number;
-  sourceAOrders: number;
-  sourceBOrders: number;
-  totalSourceA: number;
-  totalSourceB: number;
-  averageOrderValue: number;
-  topCategories: Array<{ category: string; total: number; count: number }>;
-  topCountries: Array<{ country: string; total: number; count: number }>;
-  dateRange: {
-    start: string;
-    end: string;
-  };
-}
-
-export const fetchAllOrders = async (): Promise<Order[]> => {
-  try {
-    const response = await axios.get("http://localhost:8000/api/orders/");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching all orders:", error);
-    throw error;
-  }
-};
+import { Task, TaskResponse } from "../types";
+import { DashboardStats } from "../types";
+import { Order } from "../types";
 
 export const calculateDashboardStats = (orders: Order[]): DashboardStats => {
   const totalSales = orders.reduce((sum, order) => sum + order.total_amount, 0);
@@ -73,16 +20,34 @@ export const calculateDashboardStats = (orders: Order[]): DashboardStats => {
   // Calculate average order value
   const averageOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
 
-  // Calculate date range
-  const dates = orders.map((order) => new Date(order.order_date));
-  const dateRange = {
-    start: new Date(Math.min(...dates.map((d) => d.getTime())))
-      .toISOString()
-      .split("T")[0],
-    end: new Date(Math.max(...dates.map((d) => d.getTime())))
-      .toISOString()
-      .split("T")[0],
+  // Calculate date range with proper validation
+  let dateRange = {
+    start: "N/A",
+    end: "N/A",
   };
+
+  if (orders.length > 0) {
+    const validDates = orders
+      .map((order) => {
+        try {
+          const date = new Date(order.order_date);
+          return isNaN(date.getTime()) ? null : date;
+        } catch {
+          return null;
+        }
+      })
+      .filter((date): date is Date => date !== null);
+
+    if (validDates.length > 0) {
+      const minDate = new Date(Math.min(...validDates.map((d) => d.getTime())));
+      const maxDate = new Date(Math.max(...validDates.map((d) => d.getTime())));
+
+      dateRange = {
+        start: minDate.toISOString().split("T")[0],
+        end: maxDate.toISOString().split("T")[0],
+      };
+    }
+  }
 
   // Calculate top categories
   const categoryStats = orders.reduce((acc, order) => {
@@ -134,4 +99,32 @@ export const calculateDashboardStats = (orders: Order[]): DashboardStats => {
     topCountries,
     dateRange,
   };
+};
+
+export const fetchTasks = async (): Promise<Task[]> => {
+  try {
+    const response = await fetch("http://localhost:8000/api/tasks/");
+    if (!response.ok) {
+      throw new Error("Failed to fetch tasks");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    throw error;
+  }
+};
+
+export const fetchOrdersByTaskId = async (taskId: number): Promise<Order[]> => {
+  try {
+    const response = await axios.get<TaskResponse>(
+      `http://localhost:8000/api/tasks/${taskId}/data`,
+    );
+    return response.data || [];
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return []; // Return empty array for 404 errors
+    }
+    console.error("Error fetching task data:", error);
+    throw error;
+  }
 };

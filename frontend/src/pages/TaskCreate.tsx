@@ -18,25 +18,7 @@ import {
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import axios from "axios";
-
-interface TaskFormData {
-  title: string;
-  description: string;
-  date_from: Date | null;
-  date_to: Date | null;
-  source_a_enabled: boolean;
-  source_b_enabled: boolean;
-  source_a_filters: {
-    categories: string[];
-    min_price?: number;
-    max_price?: number;
-  };
-  source_b_filters: {
-    categories: string[];
-    min_price?: number;
-    max_price?: number;
-  };
-}
+import { TaskFormData } from "../types";
 
 const SOURCE_A_CATEGORIES = [
   "Jewelry",

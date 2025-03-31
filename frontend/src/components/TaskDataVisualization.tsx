@@ -28,22 +28,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-
-interface Order {
-  id: number;
-  task_id: number;
-  source: string;
-  order_id: string;
-  order_date: string;
-  product_name: string;
-  product_category: string;
-  quantity: number;
-  unit_price: number;
-  total_amount: number;
-  customer_id: string;
-  customer_country: string;
-  source_specific_data: any;
-}
+import { Order } from "../types";
 
 interface TaskDataVisualizationProps {
   taskId: number;

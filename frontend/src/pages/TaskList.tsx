@@ -15,18 +15,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "../utils/dateUtils.ts";
-
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  created_at: string;
-  date_from?: string;
-  date_to?: string;
-  source?: string;
-}
-
+import { Task } from "../types.ts";
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "completed":

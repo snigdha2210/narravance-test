@@ -11,25 +11,7 @@ import {
 } from "@mui/material";
 import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
 import { formatDate } from "../utils/dateUtils.ts";
-
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  status: string;
-  created_at: string;
-  completed_at: string | null;
-  date_from: string;
-  date_to: string;
-  source_a_enabled: boolean;
-  source_b_enabled: boolean;
-  source_a_filters: {
-    categories: string[];
-  };
-  source_b_filters: {
-    categories: string[];
-  };
-}
+import { Task } from "../types.ts";
 
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
