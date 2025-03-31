@@ -2,6 +2,7 @@ import axios from "axios";
 import { Task, TaskResponse } from "../types";
 import { DashboardStats } from "../types";
 import { Order } from "../types";
+import config from "../config.ts";
 
 export const calculateDashboardStats = (orders: Order[]): DashboardStats => {
   const totalSales = orders.reduce((sum, order) => sum + order.total_amount, 0);
@@ -102,29 +103,29 @@ export const calculateDashboardStats = (orders: Order[]): DashboardStats => {
 };
 
 export const fetchTasks = async (): Promise<Task[]> => {
-  try {
-    const response = await fetch("http://localhost:8000/api/tasks/");
-    if (!response.ok) {
-      throw new Error("Failed to fetch tasks");
-    }
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching tasks:", error);
-    throw error;
+  const response = await fetch(`${config.apiUrl}/api/tasks`, {
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch tasks");
   }
+  return response.json();
 };
 
 export const fetchOrdersByTaskId = async (taskId: number): Promise<Order[]> => {
-  try {
-    const response = await axios.get<TaskResponse>(
-      `http://localhost:8000/api/tasks/${taskId}/data`,
-    );
-    return response.data || [];
-  } catch (error) {
-    if (axios.isAxiosError(error) && error.response?.status === 404) {
-      return []; // Return empty array for 404 errors
-    }
-    console.error("Error fetching task data:", error);
-    throw error;
+  const response = await fetch(`${config.apiUrl}/api/tasks/${taskId}/data`, {
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch orders");
   }
+  return response.json();
 };

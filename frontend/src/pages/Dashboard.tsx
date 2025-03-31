@@ -26,6 +26,7 @@ import SalesTable from "../components/SalesTable.tsx";
 import { useNavigate } from "react-router-dom";
 import { Order, Task } from "../types.ts";
 import CategorySummary from "../components/CategorySummary.tsx";
+import config from "../config";
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);

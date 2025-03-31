@@ -18,9 +18,9 @@ import {
 import { Link as RouterLink } from "react-router-dom";
 import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
 import { Task } from "../types";
+import config from "../config.ts";
 
 const POLLING_INTERVAL = 5000; // Poll every 5 seconds
-const API_BASE_URL = "http://localhost:8000"; // Hardcode the API URL for now
 
 const TaskList: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -32,7 +32,7 @@ const TaskList: React.FC = () => {
   const fetchTasks = async () => {
     if (!loading) setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tasks`, {
+      const response = await fetch(`${config.apiUrl}/api/tasks`, {
         headers: {
           "Accept": "application/json",
           "Content-Type": "application/json",
