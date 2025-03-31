@@ -23,6 +23,7 @@ import {
   Button,
   ButtonGroup,
   TextField,
+  Modal,
 } from "@mui/material";
 
 import { Order as OrderData } from "../types";
@@ -520,7 +521,23 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     </TableContainer>
   );
 
-  // Update renderTimeSeriesChart to use consistent source selector UI
+  // Add modal style
+  const modalStyle = {
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: "90vw",
+    height: "90vh",
+    bgcolor: "background.paper",
+    boxShadow: 24,
+    p: 4,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+  };
+
+  // Update renderTimeSeriesChart to use modal
   const renderTimeSeriesChart = () => {
     const data = prepareTimeSeriesData(filteredData);
     const dateRange = {
@@ -529,100 +546,124 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     };
 
     return (
-      <Paper sx={{ p: 2, position: "relative" }}>
-        <Box
-          display='flex'
-          justifyContent='space-between'
-          alignItems='center'
-          mb={2}
-        >
-          <Typography variant='h6'>Sales Over Time</Typography>
-          <Box display='flex' gap={2} alignItems='center'>
-            <FormControl size='small'>
-              <InputLabel>Source</InputLabel>
-              <Select
-                value={
-                  timeSeriesFilters.sources.length === 2
-                    ? "all"
-                    : timeSeriesFilters.sources[0]
-                }
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setTimeSeriesFilters({
-                    ...timeSeriesFilters,
-                    sources:
-                      value === "all"
-                        ? ["source_a", "source_b"]
-                        : [value as string],
-                  });
-                }}
-                label='Source'
-              >
-                <MenuItem value='all'>All Sources</MenuItem>
-                <MenuItem value='source_a'>Shopify</MenuItem>
-                <MenuItem value='source_b'>Etsy</MenuItem>
-              </Select>
-            </FormControl>
-            <ButtonGroup size='small'>
-              <Button
-                onClick={() =>
-                  setChartConfig((prev) => ({ ...prev, type: "line" }))
-                }
-                variant={chartConfig.type === "line" ? "contained" : "outlined"}
-              >
-                Line
-              </Button>
-              <Button
-                onClick={() =>
-                  setChartConfig((prev) => ({ ...prev, type: "area" }))
-                }
-                variant={chartConfig.type === "area" ? "contained" : "outlined"}
-              >
-                Area
-              </Button>
-              <Button
-                onClick={() =>
-                  setChartConfig((prev) => ({ ...prev, type: "bar" }))
-                }
-                variant={chartConfig.type === "bar" ? "contained" : "outlined"}
-              >
-                Bar
-              </Button>
-            </ButtonGroup>
-            <Tooltip
-              title={
-                expandedChart === "timeSeries"
-                  ? "Exit Fullscreen"
-                  : "Enter Fullscreen"
-              }
-            >
-              <IconButton
-                onClick={() =>
-                  setExpandedChart(
-                    expandedChart === "timeSeries" ? null : "timeSeries",
-                  )
-                }
-              >
-                {expandedChart === "timeSeries" ? (
-                  <FullscreenExitIcon />
-                ) : (
+      <>
+        <Paper sx={{ p: 2, position: "relative" }}>
+          <Box
+            display='flex'
+            justifyContent='space-between'
+            alignItems='center'
+            mb={2}
+          >
+            <Typography variant='h6'>Sales Over Time</Typography>
+            <Box display='flex' gap={2} alignItems='center'>
+              <FormControl size='small'>
+                <InputLabel>Source</InputLabel>
+                <Select
+                  value={
+                    timeSeriesFilters.sources.length === 2
+                      ? "all"
+                      : timeSeriesFilters.sources[0]
+                  }
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTimeSeriesFilters({
+                      ...timeSeriesFilters,
+                      sources:
+                        value === "all"
+                          ? ["source_a", "source_b"]
+                          : [value as string],
+                    });
+                  }}
+                  label='Source'
+                >
+                  <MenuItem value='all'>All Sources</MenuItem>
+                  <MenuItem value='source_a'>Shopify</MenuItem>
+                  <MenuItem value='source_b'>Etsy</MenuItem>
+                </Select>
+              </FormControl>
+              <ButtonGroup size='small'>
+                <Button
+                  onClick={() =>
+                    setChartConfig((prev) => ({ ...prev, type: "line" }))
+                  }
+                  variant={
+                    chartConfig.type === "line" ? "contained" : "outlined"
+                  }
+                >
+                  Line
+                </Button>
+                <Button
+                  onClick={() =>
+                    setChartConfig((prev) => ({ ...prev, type: "area" }))
+                  }
+                  variant={
+                    chartConfig.type === "area" ? "contained" : "outlined"
+                  }
+                >
+                  Area
+                </Button>
+                <Button
+                  onClick={() =>
+                    setChartConfig((prev) => ({ ...prev, type: "bar" }))
+                  }
+                  variant={
+                    chartConfig.type === "bar" ? "contained" : "outlined"
+                  }
+                >
+                  Bar
+                </Button>
+              </ButtonGroup>
+              <Tooltip title='Enter Fullscreen'>
+                <IconButton onClick={() => setExpandedChart("timeSeries")}>
                   <FullscreenIcon />
-                )}
-              </IconButton>
-            </Tooltip>
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
-        </Box>
-        <D3Chart
-          data={data}
-          title='Sales Over Time'
-          type={chartConfig.type}
-          xKey='date'
-          yKey={timeSeriesFilters.sources}
-          width={expandedChart === "timeSeries" ? 1200 : 800}
-          height={expandedChart === "timeSeries" ? 600 : 400}
-          dateRange={dateRange}
-        />
-      </Paper>
+          <D3Chart
+            data={data}
+            title='Sales Over Time'
+            type={chartConfig.type}
+            xKey='date'
+            yKey={timeSeriesFilters.sources}
+            width={800}
+            height={400}
+            dateRange={dateRange}
+          />
+        </Paper>
+
+        <Modal
+          open={expandedChart === "timeSeries"}
+          onClose={() => setExpandedChart(null)}
+          aria-labelledby='modal-sales-over-time'
+        >
+          <Box sx={modalStyle}>
+            <Box
+              display='flex'
+              justifyContent='space-between'
+              alignItems='center'
+              mb={2}
+            >
+              <Typography variant='h5'>Sales Over Time</Typography>
+              <IconButton onClick={() => setExpandedChart(null)} size='large'>
+                <FullscreenExitIcon />
+              </IconButton>
+            </Box>
+            <Box flex={1}>
+              <D3Chart
+                data={data}
+                title='Sales Over Time'
+                type={chartConfig.type}
+                xKey='date'
+                yKey={timeSeriesFilters.sources}
+                width={window.innerWidth * 0.85}
+                height={window.innerHeight * 0.75}
+                dateRange={dateRange}
+              />
+            </Box>
+          </Box>
+        </Modal>
+      </>
     );
   };
 
@@ -680,127 +721,213 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       );
   }, [filteredData, categoryFilters, categories]);
 
-  // Update renderSalesDistribution to use memoized data
-  const renderSalesDistribution = () => {
+  // Update renderCategoryChart to use modal
+  const renderCategoryChart = () => {
     return (
-      <Paper sx={{ p: 2 }}>
-        <Box
-          display='flex'
-          justifyContent='space-between'
-          alignItems='center'
-          mb={2}
-        >
-          <Typography variant='h6'>Sales Distribution</Typography>
-          <Box display='flex' gap={2}>
-            <FormControl size='small'>
-              <InputLabel>Metric</InputLabel>
-              <Select
-                value={distributionFilters.metric}
-                onChange={(e) =>
-                  setDistributionFilters({
-                    ...distributionFilters,
-                    metric: e.target.value as "orders" | "amount",
-                  })
-                }
-                label='Metric'
-              >
-                <MenuItem value='orders'>Order Count</MenuItem>
-                <MenuItem value='amount'>Sales Amount</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size='small'>
-              <InputLabel>Source</InputLabel>
-              <Select
-                value={distributionFilters.source}
-                onChange={(e) =>
-                  setDistributionFilters({
-                    ...distributionFilters,
-                    source: e.target.value as string,
-                  })
-                }
-                label='Source'
-              >
-                <MenuItem value='all'>All Sources</MenuItem>
-                <MenuItem value='source_a'>Shopify</MenuItem>
-                <MenuItem value='source_b'>Etsy</MenuItem>
-              </Select>
-            </FormControl>
+      <>
+        <Paper sx={{ p: 2 }}>
+          <Box
+            display='flex'
+            justifyContent='space-between'
+            alignItems='center'
+            mb={2}
+          >
+            <Typography variant='h6'>Sales by Category</Typography>
+            <Box display='flex' gap={2}>
+              <FormControl size='small'>
+                <InputLabel>Sort By</InputLabel>
+                <Select
+                  value={categoryFilters.sortBy}
+                  onChange={(e) =>
+                    setCategoryFilters({
+                      ...categoryFilters,
+                      sortBy: e.target.value as "amount" | "count",
+                    })
+                  }
+                  label='Sort By'
+                >
+                  <MenuItem value='amount'>Sales Amount</MenuItem>
+                  <MenuItem value='count'>Order Count</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size='small'>
+                <InputLabel>Source</InputLabel>
+                <Select
+                  value={categoryFilters.source}
+                  onChange={(e) =>
+                    setCategoryFilters({
+                      ...categoryFilters,
+                      source: e.target.value as string,
+                    })
+                  }
+                  label='Source'
+                >
+                  <MenuItem value='all'>All Sources</MenuItem>
+                  <MenuItem value='source_a'>Shopify</MenuItem>
+                  <MenuItem value='source_b'>Etsy</MenuItem>
+                </Select>
+              </FormControl>
+              <Tooltip title='Enter Fullscreen'>
+                <IconButton onClick={() => setExpandedChart("category")}>
+                  <FullscreenIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
-        </Box>
-        <D3Chart
-          data={distributionData}
-          title={`${
-            distributionFilters.metric === "orders"
-              ? "Order Count"
-              : "Sales Amount"
-          } by Category`}
-          type='pie'
-          xKey='category'
-          yKey='value'
-          height={400}
-        />
-      </Paper>
+          <D3Chart
+            data={categoryData}
+            title={`${
+              categoryFilters.sortBy === "count"
+                ? "Order Count"
+                : "Sales Amount"
+            } by Category`}
+            type='bar'
+            xKey='category'
+            yKey={categoryFilters.sortBy === "amount" ? "amount" : "count"}
+            height={400}
+          />
+        </Paper>
+
+        <Modal
+          open={expandedChart === "category"}
+          onClose={() => setExpandedChart(null)}
+          aria-labelledby='modal-sales-by-category'
+        >
+          <Box sx={modalStyle}>
+            <Box
+              display='flex'
+              justifyContent='space-between'
+              alignItems='center'
+              mb={2}
+            >
+              <Typography variant='h5'>Sales by Category</Typography>
+              <IconButton onClick={() => setExpandedChart(null)} size='large'>
+                <FullscreenExitIcon />
+              </IconButton>
+            </Box>
+            <Box flex={1}>
+              <D3Chart
+                data={categoryData}
+                title={`${
+                  categoryFilters.sortBy === "count"
+                    ? "Order Count"
+                    : "Sales Amount"
+                } by Category`}
+                type='bar'
+                xKey='category'
+                yKey={categoryFilters.sortBy === "amount" ? "amount" : "count"}
+                width={window.innerWidth * 0.85}
+                height={window.innerHeight * 0.75}
+              />
+            </Box>
+          </Box>
+        </Modal>
+      </>
     );
   };
 
-  // Update renderCategoryChart to use memoized data
-  const renderCategoryChart = () => {
+  // Update renderSalesDistribution to use modal
+  const renderSalesDistribution = () => {
     return (
-      <Paper sx={{ p: 2 }}>
-        <Box
-          display='flex'
-          justifyContent='space-between'
-          alignItems='center'
-          mb={2}
-        >
-          <Typography variant='h6'>Sales by Category</Typography>
-          <Box display='flex' gap={2}>
-            <FormControl size='small'>
-              <InputLabel>Sort By</InputLabel>
-              <Select
-                value={categoryFilters.sortBy}
-                onChange={(e) =>
-                  setCategoryFilters({
-                    ...categoryFilters,
-                    sortBy: e.target.value as "amount" | "count",
-                  })
-                }
-                label='Sort By'
-              >
-                <MenuItem value='amount'>Sales Amount</MenuItem>
-                <MenuItem value='count'>Order Count</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size='small'>
-              <InputLabel>Source</InputLabel>
-              <Select
-                value={categoryFilters.source}
-                onChange={(e) =>
-                  setCategoryFilters({
-                    ...categoryFilters,
-                    source: e.target.value as string,
-                  })
-                }
-                label='Source'
-              >
-                <MenuItem value='all'>All Sources</MenuItem>
-                <MenuItem value='source_a'>Shopify</MenuItem>
-                <MenuItem value='source_b'>Etsy</MenuItem>
-              </Select>
-            </FormControl>
+      <>
+        <Paper sx={{ p: 2 }}>
+          <Box
+            display='flex'
+            justifyContent='space-between'
+            alignItems='center'
+            mb={2}
+          >
+            <Typography variant='h6'>Sales Distribution</Typography>
+            <Box display='flex' gap={2}>
+              <FormControl size='small'>
+                <InputLabel>Metric</InputLabel>
+                <Select
+                  value={distributionFilters.metric}
+                  onChange={(e) =>
+                    setDistributionFilters({
+                      ...distributionFilters,
+                      metric: e.target.value as "orders" | "amount",
+                    })
+                  }
+                  label='Metric'
+                >
+                  <MenuItem value='orders'>Order Count</MenuItem>
+                  <MenuItem value='amount'>Sales Amount</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size='small'>
+                <InputLabel>Source</InputLabel>
+                <Select
+                  value={distributionFilters.source}
+                  onChange={(e) =>
+                    setDistributionFilters({
+                      ...distributionFilters,
+                      source: e.target.value as string,
+                    })
+                  }
+                  label='Source'
+                >
+                  <MenuItem value='all'>All Sources</MenuItem>
+                  <MenuItem value='source_a'>Shopify</MenuItem>
+                  <MenuItem value='source_b'>Etsy</MenuItem>
+                </Select>
+              </FormControl>
+              <Tooltip title='Enter Fullscreen'>
+                <IconButton onClick={() => setExpandedChart("distribution")}>
+                  <FullscreenIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
           </Box>
-        </Box>
-        <D3Chart
-          data={categoryData}
-          title={`${
-            categoryFilters.sortBy === "count" ? "Order Count" : "Sales Amount"
-          } by Category`}
-          type='bar'
-          xKey='category'
-          yKey={categoryFilters.sortBy === "amount" ? "amount" : "count"}
-          height={400}
-        />
-      </Paper>
+          <D3Chart
+            data={distributionData}
+            title={`${
+              distributionFilters.metric === "orders"
+                ? "Order Count"
+                : "Sales Amount"
+            } by Category`}
+            type='pie'
+            xKey='category'
+            yKey='value'
+            height={400}
+          />
+        </Paper>
+
+        <Modal
+          open={expandedChart === "distribution"}
+          onClose={() => setExpandedChart(null)}
+          aria-labelledby='modal-sales-distribution'
+        >
+          <Box sx={modalStyle}>
+            <Box
+              display='flex'
+              justifyContent='space-between'
+              alignItems='center'
+              mb={2}
+            >
+              <Typography variant='h5'>Sales Distribution</Typography>
+              <IconButton onClick={() => setExpandedChart(null)} size='large'>
+                <FullscreenExitIcon />
+              </IconButton>
+            </Box>
+            <Box flex={1}>
+              <D3Chart
+                data={distributionData}
+                title={`${
+                  distributionFilters.metric === "orders"
+                    ? "Order Count"
+                    : "Sales Amount"
+                } by Category`}
+                type='pie'
+                xKey='category'
+                yKey='value'
+                width={window.innerWidth * 0.85}
+                height={window.innerHeight * 0.75}
+              />
+            </Box>
+          </Box>
+        </Modal>
+      </>
     );
   };
 
