@@ -54,6 +54,12 @@ const StyledTableRow = styled(TableRow)<{ source: string }>(
   }),
 );
 
+const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  fontWeight: "bold",
+}));
+
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
 }) => {
@@ -384,21 +390,26 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
             <Typography variant='h6' gutterBottom>
               Detailed Order Data
             </Typography>
-            <TableContainer>
+            <TableContainer component={Paper} sx={{ mt: 3 }}>
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Order ID</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Source</TableCell>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Category</TableCell>
-                    <TableCell align='right'>Quantity</TableCell>
-                    <TableCell align='right'>Unit Price ($)</TableCell>
-                    <TableCell align='right'>Total ($)</TableCell>
-                    <TableCell>Customer</TableCell>
-                    <TableCell>Country</TableCell>
-                    <TableCell>Source Details</TableCell>
+                    <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Date</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Source</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Product</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Category</StyledTableHeaderCell>
+                    <StyledTableHeaderCell align='right'>
+                      Quantity
+                    </StyledTableHeaderCell>
+                    <StyledTableHeaderCell align='right'>
+                      Unit Price ($)
+                    </StyledTableHeaderCell>
+                    <StyledTableHeaderCell align='right'>
+                      Total Amount ($)
+                    </StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Customer ID</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Country</StyledTableHeaderCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -422,11 +433,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                       </TableCell>
                       <TableCell>{order.customer_id}</TableCell>
                       <TableCell>{order.customer_country}</TableCell>
-                      <TableCell>
-                        <pre style={{ fontSize: "0.8em" }}>
-                          {JSON.stringify(order.source_specific_data, null, 2)}
-                        </pre>
-                      </TableCell>
                     </StyledTableRow>
                   ))}
                 </TableBody>

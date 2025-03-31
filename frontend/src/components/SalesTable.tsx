@@ -33,6 +33,11 @@ const StyledTableRow = styled(TableRow)<{ source: string }>(
 interface SalesTableProps {
   orders: Order[];
 }
+const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  fontWeight: "bold",
+}));
 
 const SalesTable: React.FC<SalesTableProps> = ({ orders }) => {
   return (
@@ -40,14 +45,18 @@ const SalesTable: React.FC<SalesTableProps> = ({ orders }) => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Source</TableCell>
-            <TableCell>Order ID</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Product</TableCell>
-            <TableCell>Category</TableCell>
-            <TableCell align='right'>Quantity</TableCell>
-            <TableCell align='right'>Unit Price</TableCell>
-            <TableCell align='right'>Total</TableCell>
+            <StyledTableHeaderCell>Source</StyledTableHeaderCell>
+            <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
+            <StyledTableHeaderCell>Date</StyledTableHeaderCell>
+            <StyledTableHeaderCell>Product</StyledTableHeaderCell>
+            <StyledTableHeaderCell>Category</StyledTableHeaderCell>
+            <StyledTableHeaderCell align='right'>
+              Quantity
+            </StyledTableHeaderCell>
+            <StyledTableHeaderCell align='right'>
+              Unit Price
+            </StyledTableHeaderCell>
+            <StyledTableHeaderCell align='right'>Total</StyledTableHeaderCell>
           </TableRow>
         </TableHead>
         <TableBody>
