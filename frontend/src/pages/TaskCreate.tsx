@@ -171,7 +171,7 @@ const TaskCreate: React.FC = () => {
                         onChange={() => handleSourceToggle("source_a")}
                       />
                     }
-                    label='Enable Source A (Etsy)'
+                    label='Enable Source A (Shopify)'
                   />
                 </FormGroup>
                 {formData.source_a_enabled && (
@@ -210,7 +210,7 @@ const TaskCreate: React.FC = () => {
                         onChange={() => handleSourceToggle("source_b")}
                       />
                     }
-                    label='Enable Source B (Shopify)'
+                    label='Enable Source B (Etsy)'
                   />
                 </FormGroup>
                 {formData.source_b_enabled && (

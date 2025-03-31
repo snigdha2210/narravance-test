@@ -25,8 +25,8 @@ class Task(Base):
     date_to = Column(DateTime)
     source_a_enabled = Column(Boolean, default=True)
     source_b_enabled = Column(Boolean, default=True)
-    source_a_filters = Column(JSON)  # For Etsy-specific filters
-    source_b_filters = Column(JSON)  # For Shopify-specific filters
+    source_a_filters = Column(JSON)  # For Shopify-specific filters
+    source_b_filters = Column(JSON)  # For Etsy-specific filters
     
     # Relationship with orders
     orders = relationship("Order", back_populates="task")
