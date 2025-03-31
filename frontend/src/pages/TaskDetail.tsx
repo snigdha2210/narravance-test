@@ -8,10 +8,13 @@ import {
   Chip,
   Grid,
   CircularProgress,
+  Container,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
 import { formatDate } from "../utils/dateUtils.ts";
 import { Task } from "../types.ts";
+import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
 
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
@@ -62,7 +65,7 @@ const TaskDetail: React.FC = () => {
         display='flex'
         justifyContent='center'
         alignItems='center'
-        minHeight='200px'
+        minHeight='100vh'
       >
         <CircularProgress />
       </Box>
@@ -71,9 +74,21 @@ const TaskDetail: React.FC = () => {
 
   if (error || !task) {
     return (
-      <Box sx={{ mt: 4 }}>
-        <Typography color='error'>{error || "Task not found"}</Typography>
-      </Box>
+      <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography color='error' gutterBottom>
+            {error || "Task not found"}
+          </Typography>
+          <Button
+            component={RouterLink}
+            to='/tasks'
+            variant='contained'
+            sx={{ mt: 2 }}
+          >
+            Back to Tasks
+          </Button>
+        </Paper>
+      </Container>
     );
   }
 
@@ -83,69 +98,64 @@ const TaskDetail: React.FC = () => {
   console.log("Categories:", task.source_b_filters.categories);
 
   return (
-    <Box sx={{ mt: 4 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Box
-              display='flex'
-              justifyContent='space-between'
-              alignItems='center'
-              mb={2}
-            >
-              <Typography variant='h5' component='h1'>
-                {task.title}
-              </Typography>
-              <Chip
-                label={task.status}
-                color={getStatusColor(task.status)}
-                size='medium'
-              />
-            </Box>
-            <Typography variant='body1' paragraph>
-              {task.description}
-            </Typography>
-            <Box mt={2}>
-              <Typography variant='subtitle2' color='text.secondary'>
-                Created: {formatDate(task.created_at, true)}
-              </Typography>
-              {(task.source_a_filters.categories.length > 0 ||
-                task.source_b_filters.categories.length > 0) && (
-                <Typography variant='subtitle2' color='text.secondary'>
-                  Categories: {task.source_a_filters.categories.join(", ")}{" "}
-                  {task.source_b_filters.categories.join(", ")}
-                </Typography>
-              )}
-              {task.date_from && (
-                <Typography variant='subtitle2' color='text.secondary'>
-                  Date Range: {formatDate(task.date_from)} -{" "}
-                  {formatDate(task.date_to)}
-                </Typography>
-              )}
-              {task.completed_at && (
-                <Typography variant='subtitle2' color='text.secondary'>
-                  Completed: {formatDate(task.completed_at, true)}
-                </Typography>
-              )}
-            </Box>
-            <Box mt={2} display='flex' gap={2}>
-              <Button variant='outlined' color='primary' href='/tasks'>
-                Back to Tasks
-              </Button>
-            </Box>
-          </Paper>
-        </Grid>
+    <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Button
+          component={RouterLink}
+          to='/tasks'
+          variant='outlined'
+          sx={{ mb: 2 }}
+        >
+          Back to Tasks
+        </Button>
 
-        {task.status.toLowerCase() === "completed" && (
-          <Grid item xs={12}>
-            <Typography variant='h6' gutterBottom>
-              Task Data Visualization
+        <Paper sx={{ p: 4 }}>
+          <Typography variant='h4' gutterBottom>
+            {task.title}
+          </Typography>
+
+          <Box sx={{ my: 4 }}>
+            <TaskProgress
+              status={task.status.toLowerCase() as TaskStatus}
+              size='large'
+            />
+          </Box>
+
+          <Typography variant='body1' color='text.secondary' paragraph>
+            {task.description}
+          </Typography>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant='subtitle2' color='text.secondary'>
+              Created: {new Date(task.created_at).toLocaleString()}
             </Typography>
-            <TaskDataVisualization taskId={parseInt(id!, 10)} />
-          </Grid>
-        )}
-      </Grid>
-    </Box>
+            {task.completed_at && (
+              <Typography variant='subtitle2' color='text.secondary'>
+                Completed: {new Date(task.completed_at).toLocaleString()}
+              </Typography>
+            )}
+            {task.date_from && task.date_to && (
+              <Typography variant='subtitle2' color='text.secondary'>
+                Date Range: {new Date(task.date_from).toLocaleDateString()} -{" "}
+                {new Date(task.date_to).toLocaleDateString()}
+              </Typography>
+            )}
+            {(task.source_a_filters?.categories?.length > 0 ||
+              task.source_b_filters?.categories?.length > 0) && (
+              <Typography variant='subtitle2' color='text.secondary'>
+                Categories:{" "}
+                {[
+                  ...(task.source_a_filters?.categories || []),
+                  ...(task.source_b_filters?.categories || []),
+                ].join(", ")}
+              </Typography>
+            )}
+          </Box>
+        </Paper>
+      </Box>
+
+      <TaskDataVisualization taskId={task.id} />
+    </Container>
   );
 };
 

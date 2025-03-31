@@ -16,6 +16,9 @@ import {
 import { useNavigate } from "react-router-dom";
 import { formatDate } from "../utils/dateUtils.ts";
 import { Task } from "../types.ts";
+import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
+import { Link as RouterLink } from "react-router-dom";
+
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
     case "completed":
@@ -99,6 +102,7 @@ const TaskList: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>Title</TableCell>
+              <TableCell>Description</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Date Range</TableCell>
               <TableCell>Created</TableCell>
@@ -115,10 +119,10 @@ const TaskList: React.FC = () => {
               return (
                 <TableRow key={task.id}>
                   <TableCell>{task.title}</TableCell>
+                  <TableCell>{task.description}</TableCell>
                   <TableCell>
-                    <Chip
-                      label={task.status}
-                      color={getStatusColor(task.status)}
+                    <TaskProgress
+                      status={task.status.toLowerCase() as TaskStatus}
                       size='small'
                     />
                   </TableCell>
@@ -132,12 +136,12 @@ const TaskList: React.FC = () => {
                   <TableCell>{formatDate(task.created_at, true)}</TableCell>
                   <TableCell>
                     <Button
+                      component={RouterLink}
+                      to={`/task/${task.id}`}
                       variant='outlined'
-                      color='primary'
                       size='small'
-                      onClick={() => navigate(`/task/${task.id}`)}
                     >
-                      View
+                      View Details
                     </Button>
                   </TableCell>
                 </TableRow>
