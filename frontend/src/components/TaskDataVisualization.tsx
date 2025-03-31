@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Box,
   Paper,
@@ -22,22 +22,9 @@ import {
   Tooltip,
   Button,
   ButtonGroup,
+  TextField,
 } from "@mui/material";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  AreaChart,
-  Area,
-} from "recharts";
+
 import { Order as OrderData } from "../types";
 import { formatDateToEST, formatDateOnlyToEST } from "../utils/dateUtils.ts";
 
@@ -48,6 +35,7 @@ import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 import PrintIcon from "@mui/icons-material/Print";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import D3Chart from "./D3Chart.tsx";
 
 interface TaskDataVisualizationProps {
   taskId: number;
@@ -94,12 +82,10 @@ interface ChartAnnotation {
   color: string;
 }
 
+type ChartType = "line" | "area" | "bar" | "pie";
+
 interface ChartConfig {
-  type: "line" | "bar" | "area" | "composed";
-  showSourceA: boolean;
-  showSourceB: boolean;
-  showTrendLine: boolean;
-  annotations: ChartAnnotation[];
+  type: ChartType;
 }
 
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
@@ -134,16 +120,30 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   });
 
   // Add new state for chart configuration
-  const [chartConfig, setChartConfig] = useState<ChartConfig>({
-    type: "line",
-    showSourceA: true,
-    showSourceB: true,
-    showTrendLine: false,
-    annotations: [],
+  const [chartConfig, setChartConfig] = useState<ChartConfig>({ type: "line" });
+  const [categoryChartConfig, setCategoryChartConfig] = useState<ChartConfig>({
+    type: "bar",
   });
 
-  const filterData = (data: OrderData[]) => {
-    const filtered = data.filter((order) => {
+  // Add new state for individual chart filters
+  const [timeSeriesFilters, setTimeSeriesFilters] = useState({
+    sources: ["source_a", "source_b"],
+  });
+
+  const [categoryFilters, setCategoryFilters] = useState({
+    source: "all",
+    sortBy: "amount" as "amount" | "count",
+  });
+
+  // Add new state for additional chart
+  const [distributionFilters, setDistributionFilters] = useState({
+    metric: "orders" as "orders" | "amount",
+    source: "all",
+  });
+
+  // Memoize filtered data
+  const filteredData = useMemo(() => {
+    return orders.filter((order) => {
       const orderDate = new Date(order.order_date);
       const now = new Date();
       const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
@@ -169,8 +169,51 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
       return dateMatch && sourceMatch && categoryMatch;
     });
-    return filtered;
-  };
+  }, [
+    orders,
+    filters.dateRange,
+    filters.startDate,
+    filters.endDate,
+    filters.source,
+    filters.category,
+  ]);
+
+  // Get unique sources and categories for filters
+  const sources = useMemo(
+    () => Array.from(new Set(orders.map((order) => order.source))),
+    [orders],
+  );
+  const categories = useMemo(
+    () => Array.from(new Set(orders.map((order) => order.product_category))),
+    [orders],
+  );
+
+  // Calculate aggregated data for charts
+  const salesByCategory = useMemo(() => {
+    const categoryData = filteredData.reduce((acc, order) => {
+      acc[order.product_category] =
+        (acc[order.product_category] || 0) + order.total_amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(categoryData).map(([category, total]) => ({
+      product_category: category,
+      total_amount: total,
+    }));
+  }, [filteredData]);
+
+  const salesByDate = useMemo(() => {
+    const dateData = filteredData.reduce((acc, order) => {
+      const date = formatDateOnlyToEST(new Date(order.order_date));
+      acc[date] = (acc[date] || 0) + order.total_amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(dateData).map(([date, total]) => ({
+      order_date: date,
+      total_amount: total,
+    }));
+  }, [filteredData]);
 
   const prepareTimeSeriesData = (orders: OrderData[]) => {
     const timeSeriesData = orders.map((order) => ({
@@ -204,27 +247,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     const result = Object.values(groupedData);
     console.log("Time series data after grouping:", result);
     return result;
-  };
-
-  const prepareCategoryData = (orders: OrderData[]) => {
-    const categoryData = orders.reduce((acc, order) => {
-      const category = order.product_category;
-      if (!acc[category]) {
-        acc[category] = {
-          category,
-          source_a: 0,
-          source_b: 0,
-        };
-      }
-      if (order.source === "source_a") {
-        acc[category].source_a += order.total_amount;
-      } else if (order.source === "source_b") {
-        acc[category].source_b += order.total_amount;
-      }
-      return acc;
-    }, {} as Record<string, { category: string; source_a: number; source_b: number }>);
-
-    return Object.values(categoryData);
   };
 
   const prepareSourceData = (orders: OrderData[]) => {
@@ -271,7 +293,32 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
   // Add sorting logic to filterData
   const filterAndSortData = (data: OrderData[]) => {
-    const filtered = filterData(data);
+    const filtered = data.filter((order) => {
+      const orderDate = new Date(order.order_date);
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
+
+      let dateMatch = true;
+      if (filters.dateRange === "30days") {
+        dateMatch = orderDate >= thirtyDaysAgo;
+      } else if (
+        filters.dateRange === "custom" &&
+        filters.startDate &&
+        filters.endDate
+      ) {
+        dateMatch =
+          orderDate >= filters.startDate && orderDate <= filters.endDate;
+      }
+
+      const sourceMatch =
+        filters.source === "all" || order.source === filters.source;
+
+      const categoryMatch =
+        filters.category === "all" ||
+        order.product_category === filters.category;
+
+      return dateMatch && sourceMatch && categoryMatch;
+    });
     return filtered.sort((a, b) => {
       const aValue = a[sortConfig.field];
       const bValue = b[sortConfig.field];
@@ -368,7 +415,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     return null;
   };
 
-  // Add function to handle annotation
+  // Remove the handleAddAnnotation function since we're not using annotations
   const handleAddAnnotation = (data: any) => {
     if (!data) return;
 
@@ -381,15 +428,9 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
         : data.amount;
 
     if (value !== undefined && value !== null) {
-      const newAnnotation: ChartAnnotation = {
-        x: data.date,
-        y: value,
-        text: `$${value.toFixed(2)}`,
-        color: theme.palette.primary.main,
-      };
       setChartConfig((prev) => ({
         ...prev,
-        annotations: [...prev.annotations, newAnnotation],
+        type: prev.type,
       }));
     }
   };
@@ -479,9 +520,13 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     </TableContainer>
   );
 
-  // Modify the time series chart to include new features
+  // Update renderTimeSeriesChart to use consistent source selector UI
   const renderTimeSeriesChart = () => {
-    const data = prepareTimeSeriesData(filterData(orders));
+    const data = prepareTimeSeriesData(filteredData);
+    const dateRange = {
+      start: filters.startDate || new Date("2015-01-01"),
+      end: filters.endDate || new Date("2025-03-31"),
+    };
 
     return (
       <Paper sx={{ p: 2, position: "relative" }}>
@@ -493,6 +538,31 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
         >
           <Typography variant='h6'>Sales Over Time</Typography>
           <Box display='flex' gap={2} alignItems='center'>
+            <FormControl size='small'>
+              <InputLabel>Source</InputLabel>
+              <Select
+                value={
+                  timeSeriesFilters.sources.length === 2
+                    ? "all"
+                    : timeSeriesFilters.sources[0]
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTimeSeriesFilters({
+                    ...timeSeriesFilters,
+                    sources:
+                      value === "all"
+                        ? ["source_a", "source_b"]
+                        : [value as string],
+                  });
+                }}
+                label='Source'
+              >
+                <MenuItem value='all'>All Sources</MenuItem>
+                <MenuItem value='source_a'>Shopify</MenuItem>
+                <MenuItem value='source_b'>Etsy</MenuItem>
+              </Select>
+            </FormControl>
             <ButtonGroup size='small'>
               <Button
                 onClick={() =>
@@ -542,186 +612,223 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
             </Tooltip>
           </Box>
         </Box>
-        <ResponsiveContainer
-          width='100%'
-          height={expandedChart === "timeSeries" ? 600 : 300}
+        <D3Chart
+          data={data}
+          title='Sales Over Time'
+          type={chartConfig.type}
+          xKey='date'
+          yKey={timeSeriesFilters.sources}
+          width={expandedChart === "timeSeries" ? 1200 : 800}
+          height={expandedChart === "timeSeries" ? 600 : 400}
+          dateRange={dateRange}
+        />
+      </Paper>
+    );
+  };
+
+  // Add memoized data for distribution chart
+  const distributionData = useMemo(() => {
+    const sourceFilter = distributionFilters.source;
+    const filteredOrders =
+      sourceFilter === "all"
+        ? filteredData
+        : filteredData.filter((order) => order.source === sourceFilter);
+
+    if (distributionFilters.metric === "orders") {
+      return categories.map((category) => ({
+        category,
+        value: filteredOrders.filter(
+          (order) => order.product_category === category,
+        ).length,
+      }));
+    } else {
+      return categories.map((category) => ({
+        category,
+        value: filteredOrders
+          .filter((order) => order.product_category === category)
+          .reduce((sum, order) => sum + order.total_amount, 0),
+      }));
+    }
+  }, [filteredData, distributionFilters, categories]);
+
+  // Add memoized data for category chart
+  const categoryData = useMemo(() => {
+    const sourceFilter = categoryFilters.source;
+    const filteredOrders =
+      sourceFilter === "all"
+        ? filteredData
+        : filteredData.filter((order) => order.source === sourceFilter);
+
+    return categories
+      .map((category) => {
+        const categoryOrders = filteredOrders.filter(
+          (order) => order.product_category === category,
+        );
+        return {
+          category,
+          amount: categoryOrders.reduce(
+            (sum, order) => sum + order.total_amount,
+            0,
+          ),
+          count: categoryOrders.length,
+        };
+      })
+      .sort((a, b) =>
+        categoryFilters.sortBy === "amount"
+          ? b.amount - a.amount
+          : b.count - a.count,
+      );
+  }, [filteredData, categoryFilters, categories]);
+
+  // Update renderSalesDistribution to use memoized data
+  const renderSalesDistribution = () => {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Box
+          display='flex'
+          justifyContent='space-between'
+          alignItems='center'
+          mb={2}
         >
-          {chartConfig.type === "line" ? (
-            <LineChart
-              data={data}
-              onMouseDown={(e) => {
-                if (e && e.activePayload) {
-                  handleAddAnnotation(e.activePayload[0].payload);
+          <Typography variant='h6'>Sales Distribution</Typography>
+          <Box display='flex' gap={2}>
+            <FormControl size='small'>
+              <InputLabel>Metric</InputLabel>
+              <Select
+                value={distributionFilters.metric}
+                onChange={(e) =>
+                  setDistributionFilters({
+                    ...distributionFilters,
+                    metric: e.target.value as "orders" | "amount",
+                  })
                 }
-              }}
-            >
-              <CartesianGrid strokeDasharray='3 3' />
-              <XAxis
-                dataKey='date'
-                tickFormatter={(date) => formatDateOnlyToEST(date)}
-              />
-              <YAxis />
-              <RechartsTooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line
-                type='monotone'
-                dataKey='source_a'
-                stroke={theme.palette.sourceA.main}
-                name='Shopify Sales ($)'
-                dot={{ r: 4 }}
-                activeDot={{
-                  r: 8,
-                  onClick: (data) => handleAddAnnotation(data.payload),
-                }}
-              />
-              <Line
-                type='monotone'
-                dataKey='source_b'
-                stroke={theme.palette.sourceB.main}
-                name='Etsy Sales ($)'
-                dot={{ r: 4 }}
-                activeDot={{
-                  r: 8,
-                  onClick: (data) => handleAddAnnotation(data.payload),
-                }}
-              />
-              {chartConfig.annotations.map((annotation, index) => (
-                <ReferenceLine
-                  key={index}
-                  x={annotation.x}
-                  y={annotation.y}
-                  stroke={annotation.color}
-                  label={{
-                    value: annotation.text,
-                    position: "top",
-                    fill: annotation.color,
-                  }}
-                />
-              ))}
-            </LineChart>
-          ) : chartConfig.type === "area" ? (
-            <AreaChart
-              data={data}
-              onMouseDown={(e) => {
-                if (e && e.activePayload) {
-                  handleAddAnnotation(e.activePayload[0].payload);
+                label='Metric'
+              >
+                <MenuItem value='orders'>Order Count</MenuItem>
+                <MenuItem value='amount'>Sales Amount</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size='small'>
+              <InputLabel>Source</InputLabel>
+              <Select
+                value={distributionFilters.source}
+                onChange={(e) =>
+                  setDistributionFilters({
+                    ...distributionFilters,
+                    source: e.target.value as string,
+                  })
                 }
-              }}
-            >
-              <CartesianGrid strokeDasharray='3 3' />
-              <XAxis
-                dataKey='date'
-                tickFormatter={(date) => formatDateOnlyToEST(date)}
-              />
-              <YAxis />
-              <RechartsTooltip content={<CustomTooltip />} />
-              <Legend />
-              <Area
-                type='monotone'
-                dataKey='source_a'
-                stroke={theme.palette.sourceA.main}
-                fill={theme.palette.sourceA.main}
-                fillOpacity={0.3}
-                name='Shopify Sales ($)'
-              />
-              <Area
-                type='monotone'
-                dataKey='source_b'
-                stroke={theme.palette.sourceB.main}
-                fill={theme.palette.sourceB.main}
-                fillOpacity={0.3}
-                name='Etsy Sales ($)'
-              />
-              {chartConfig.annotations.map((annotation, index) => (
-                <ReferenceLine
-                  key={index}
-                  x={annotation.x}
-                  y={annotation.y}
-                  stroke={annotation.color}
-                  label={{
-                    value: annotation.text,
-                    position: "top",
-                    fill: annotation.color,
-                  }}
-                />
-              ))}
-            </AreaChart>
-          ) : (
-            <BarChart
-              data={data}
-              onMouseDown={(e) => {
-                if (e && e.activePayload) {
-                  handleAddAnnotation(e.activePayload[0].payload);
+                label='Source'
+              >
+                <MenuItem value='all'>All Sources</MenuItem>
+                <MenuItem value='source_a'>Shopify</MenuItem>
+                <MenuItem value='source_b'>Etsy</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+        <D3Chart
+          data={distributionData}
+          title={`${
+            distributionFilters.metric === "orders"
+              ? "Order Count"
+              : "Sales Amount"
+          } by Category`}
+          type='pie'
+          xKey='category'
+          yKey='value'
+          height={400}
+        />
+      </Paper>
+    );
+  };
+
+  // Update renderCategoryChart to use memoized data
+  const renderCategoryChart = () => {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Box
+          display='flex'
+          justifyContent='space-between'
+          alignItems='center'
+          mb={2}
+        >
+          <Typography variant='h6'>Sales by Category</Typography>
+          <Box display='flex' gap={2}>
+            <FormControl size='small'>
+              <InputLabel>Sort By</InputLabel>
+              <Select
+                value={categoryFilters.sortBy}
+                onChange={(e) =>
+                  setCategoryFilters({
+                    ...categoryFilters,
+                    sortBy: e.target.value as "amount" | "count",
+                  })
                 }
-              }}
-            >
-              <CartesianGrid strokeDasharray='3 3' />
-              <XAxis
-                dataKey='date'
-                tickFormatter={(date) => formatDateOnlyToEST(date)}
-              />
-              <YAxis />
-              <RechartsTooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar
-                dataKey='source_a'
-                fill={theme.palette.sourceA.main}
-                name='Shopify Sales ($)'
-              />
-              <Bar
-                dataKey='source_b'
-                fill={theme.palette.sourceB.main}
-                name='Etsy Sales ($)'
-              />
-              {chartConfig.annotations.map((annotation, index) => (
-                <ReferenceLine
-                  key={index}
-                  x={annotation.x}
-                  y={annotation.y}
-                  stroke={annotation.color}
-                  label={{
-                    value: annotation.text,
-                    position: "top",
-                    fill: annotation.color,
-                  }}
-                />
-              ))}
-            </BarChart>
-          )}
-        </ResponsiveContainer>
+                label='Sort By'
+              >
+                <MenuItem value='amount'>Sales Amount</MenuItem>
+                <MenuItem value='count'>Order Count</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size='small'>
+              <InputLabel>Source</InputLabel>
+              <Select
+                value={categoryFilters.source}
+                onChange={(e) =>
+                  setCategoryFilters({
+                    ...categoryFilters,
+                    source: e.target.value as string,
+                  })
+                }
+                label='Source'
+              >
+                <MenuItem value='all'>All Sources</MenuItem>
+                <MenuItem value='source_a'>Shopify</MenuItem>
+                <MenuItem value='source_b'>Etsy</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
+        <D3Chart
+          data={categoryData}
+          title={`${
+            categoryFilters.sortBy === "count" ? "Order Count" : "Sales Amount"
+          } by Category`}
+          type='bar'
+          xKey='category'
+          yKey={categoryFilters.sortBy === "amount" ? "amount" : "count"}
+          height={400}
+        />
       </Paper>
     );
   };
 
   // Add CSV export functionality
   const handleExportCSV = () => {
-    const filteredData = filterAndSortData(orders);
     const headers = ["Order ID", "Date", "Amount", "Category", "Source"];
     const csvContent = [
       headers.join(","),
       ...filteredData.map((order) =>
         [
           order.order_id,
-          formatDateToEST(order.order_date),
-          order.total_amount.toFixed(2),
+          formatDateToEST(new Date(order.order_date)),
+          order.total_amount,
           order.product_category,
-          order.source === "source_a" ? "Shopify" : "Etsy",
+          order.source,
         ].join(","),
       ),
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `sales_data_${new Date().toISOString().split("T")[0]}.csv`,
-    );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sales_data_${formatDateToEST(new Date())}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   };
 
   // Add print functionality
@@ -867,13 +974,11 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 label='Category'
               >
                 <MenuItem value='all'>All Categories</MenuItem>
-                {Array.from(new Set(orders.map((o) => o.product_category))).map(
-                  (category) => (
-                    <MenuItem key={category} value={category}>
-                      {category}
-                    </MenuItem>
-                  ),
-                )}
+                {categories.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           </Grid>
@@ -887,36 +992,18 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
           {renderTimeSeriesChart()}
         </Grid>
 
-        {/* Category Distribution */}
+        {/* Category Chart */}
         <Grid item xs={12} md={6}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6' gutterBottom>
-              Sales by Category
-            </Typography>
-            <ResponsiveContainer width='100%' height={300}>
-              <BarChart data={prepareCategoryData(orders)}>
-                <CartesianGrid strokeDasharray='3 3' />
-                <XAxis dataKey='category' />
-                <YAxis />
-                <RechartsTooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar
-                  dataKey='source_a'
-                  fill={theme.palette.sourceA.main}
-                  name='Shopify Sales ($)'
-                />
-                <Bar
-                  dataKey='source_b'
-                  fill={theme.palette.sourceB.main}
-                  name='Etsy Sales ($)'
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </Paper>
+          {renderCategoryChart()}
+        </Grid>
+
+        {/* Distribution Chart */}
+        <Grid item xs={12} md={6}>
+          {renderSalesDistribution()}
         </Grid>
 
         {/* Source Performance */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Paper sx={{ p: 2 }}>
             <Typography variant='h6' gutterBottom>
               Source Performance

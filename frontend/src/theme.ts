@@ -1,4 +1,5 @@
 import { createTheme } from "@mui/material/styles";
+import { Theme } from "@mui/material/styles";
 
 declare module "@mui/material/styles" {
   interface Palette {
@@ -40,14 +41,14 @@ const theme = createTheme({
       dark: "#7b1fa2",
     },
     sourceA: {
-      main: "#8884d8", // Purple for Source A (used in charts)
-      light: "#a4a1e4",
-      background: "rgba(136, 132, 216, 0.1)", // Light purple background
+      main: "#1976d2",
+      light: "#42a5f5",
+      background: "rgba(25, 118, 210, 0.08)",
     },
     sourceB: {
-      main: "#82ca9d", // Green for Source B (used in charts)
-      light: "#a1dbb6",
-      background: "rgba(130, 202, 157, 0.1)", // Light green background
+      main: "#2e7d32",
+      light: "#4caf50",
+      background: "rgba(46, 125, 50, 0.08)",
     },
   },
   components: {

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, SessionLocal
 from .models import models
-from .routes import task_routes, order_routes
+from .routes import task_routes
 from .services.task_processor import TaskProcessor
 import asyncio
 
@@ -30,7 +30,7 @@ async def startup_event():
 
 # Include routers
 app.include_router(task_routes.router, prefix="/api")
-app.include_router(order_routes.router, prefix="/api")
+
 
 @app.get("/")
 async def root():
