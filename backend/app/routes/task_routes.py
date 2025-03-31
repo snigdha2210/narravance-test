@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict, Optional
 from ..database import get_db
 from ..services.task_service import TaskService
-from ..models.models import Task, Order
+from ..models.models import Task, Order, TaskStatus
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -12,7 +12,12 @@ router = APIRouter()
 class TaskCreate(BaseModel):
     title: str
     description: str
-    status: str = "pending"
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    source_a_enabled: bool = True
+    source_b_enabled: bool = True
+    source_a_filters: Optional[Dict] = None
+    source_b_filters: Optional[Dict] = None
 
 class TaskResponse(BaseModel):
     id: int
@@ -20,22 +25,31 @@ class TaskResponse(BaseModel):
     description: str
     status: str
     created_at: datetime
-    completed_at: datetime | None
+    completed_at: Optional[datetime] = None
+    date_from: Optional[datetime] = None
+    date_to: Optional[datetime] = None
+    source_a_enabled: bool
+    source_b_enabled: bool
+    source_a_filters: Optional[Dict] = None
+    source_b_filters: Optional[Dict] = None
 
     class Config:
         from_attributes = True
 
 class OrderResponse(BaseModel):
     id: int
-    order_id: str
-    product_name: str
-    category: str
-    quantity: int
-    price_per_unit: float
-    total_price: float
-    order_date: datetime
-    customer_country: str
+    task_id: int
     source: str
+    order_id: str
+    order_date: datetime
+    product_name: str
+    product_category: str
+    quantity: int
+    unit_price: float
+    total_amount: float
+    customer_id: str
+    customer_country: str
+    source_specific_data: str
 
     class Config:
         from_attributes = True
@@ -51,7 +65,12 @@ async def create_task(task: TaskCreate, db: Session = Depends(get_db)):
     return await task_service.create_task(
         title=task.title,
         description=task.description,
-        status=task.status
+        date_from=task.date_from,
+        date_to=task.date_to,
+        source_a_enabled=task.source_a_enabled,
+        source_b_enabled=task.source_b_enabled,
+        source_a_filters=task.source_a_filters,
+        source_b_filters=task.source_b_filters,
     )
 
 @router.get("/tasks/{task_id}", response_model=TaskResponse)

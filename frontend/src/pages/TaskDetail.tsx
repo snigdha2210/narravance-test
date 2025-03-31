@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Paper,
@@ -9,20 +9,43 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
-import axios from "axios";
+import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
+import { formatDate } from "../utils/dateUtils.ts";
 
 interface Task {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  status: "pending" | "in_progress" | "completed";
+  status: string;
   created_at: string;
   completed_at: string | null;
+  date_from: string;
+  date_to: string;
+  source_a_enabled: boolean;
+  source_b_enabled: boolean;
+  source_a_filters: {
+    categories: string[];
+  };
+  source_b_filters: {
+    categories: string[];
+  };
 }
+
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "completed":
+      return "success";
+    case "in_progress":
+      return "warning";
+    case "pending":
+      return "info";
+    default:
+      return "default";
+  }
+};
 
 const TaskDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,33 +53,26 @@ const TaskDetail: React.FC = () => {
   useEffect(() => {
     const fetchTask = async () => {
       try {
-        const response = await axios.get(
-          `http://localhost:8000/api/tasks/${id}`,
-        );
-        setTask(response.data);
+        console.log("Fetching task with ID:", id);
+        const response = await fetch(`http://localhost:8000/api/tasks/${id}`);
+        if (!response.ok) {
+          throw new Error("Task not found");
+        }
+        const data = await response.json();
+        console.log("Fetched task data:", data);
+        setTask(data);
       } catch (err) {
         console.error("Error fetching task:", err);
-        setError("Failed to fetch task details");
+        setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTask();
-  }, [id]);
-
-  const getStatusColor = (
-    status: Task["status"],
-  ): "primary" | "warning" | "success" => {
-    switch (status) {
-      case "completed":
-        return "success";
-      case "in_progress":
-        return "warning";
-      default:
-        return "primary";
+    if (id) {
+      fetchTask();
     }
-  };
+  }, [id]);
 
   if (loading) {
     return (
@@ -64,7 +80,7 @@ const TaskDetail: React.FC = () => {
         display='flex'
         justifyContent='center'
         alignItems='center'
-        minHeight='100vh'
+        minHeight='200px'
       >
         <CircularProgress />
       </Box>
@@ -73,61 +89,71 @@ const TaskDetail: React.FC = () => {
 
   if (error || !task) {
     return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='100vh'
-      >
+      <Box sx={{ mt: 4 }}>
         <Typography color='error'>{error || "Task not found"}</Typography>
       </Box>
     );
   }
 
+  console.log("Task status:", task.status);
+  console.log("Task completed_at:", task.completed_at);
+
   return (
     <Box sx={{ mt: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Paper sx={{ p: 3 }}>
             <Box
               display='flex'
               justifyContent='space-between'
               alignItems='center'
+              mb={2}
             >
-              <Typography variant='h4'>{task.title}</Typography>
+              <Typography variant='h5' component='h1'>
+                {task.title}
+              </Typography>
               <Chip
-                label={task.status.replace("_", " ")}
+                label={task.status}
                 color={getStatusColor(task.status)}
                 size='medium'
               />
             </Box>
-          </Grid>
-          <Grid item xs={12}>
             <Typography variant='body1' paragraph>
               {task.description}
             </Typography>
-          </Grid>
-          <Grid item xs={12}>
-            <Typography variant='body2' color='text.secondary'>
-              Created: {new Date(task.created_at).toLocaleDateString()}
-            </Typography>
-            {task.completed_at && (
-              <Typography variant='body2' color='text.secondary'>
-                Completed: {new Date(task.completed_at).toLocaleDateString()}
+            <Box mt={2}>
+              <Typography variant='subtitle2' color='text.secondary'>
+                Created: {formatDate(task.created_at, true)}
               </Typography>
-            )}
-          </Grid>
-          <Grid item xs={12}>
-            <Button
-              variant='contained'
-              color='primary'
-              onClick={() => navigate("/tasks")}
-            >
-              Back to Tasks
-            </Button>
-          </Grid>
+              {task.date_from && (
+                <Typography variant='subtitle2' color='text.secondary'>
+                  Date Range: {formatDate(task.date_from)} -{" "}
+                  {formatDate(task.date_to)}
+                </Typography>
+              )}
+              {task.completed_at && (
+                <Typography variant='subtitle2' color='text.secondary'>
+                  Completed: {formatDate(task.completed_at, true)}
+                </Typography>
+              )}
+            </Box>
+            <Box mt={2} display='flex' gap={2}>
+              <Button variant='outlined' color='primary' href='/tasks'>
+                Back to Tasks
+              </Button>
+            </Box>
+          </Paper>
         </Grid>
-      </Paper>
+
+        {task.status.toLowerCase() === "completed" && (
+          <Grid item xs={12}>
+            <Typography variant='h6' gutterBottom>
+              Task Data Visualization
+            </Typography>
+            <TaskDataVisualization taskId={parseInt(id!, 10)} />
+          </Grid>
+        )}
+      </Grid>
     </Box>
   );
 };

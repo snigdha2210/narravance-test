@@ -11,17 +11,34 @@ import {
   Typography,
   Box,
   CircularProgress,
+  Chip,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { formatDate } from "../utils/dateUtils.ts";
 
 interface Task {
-  id: string;
+  id: number;
   title: string;
   description: string;
-  status: "pending" | "in_progress" | "completed";
-  createdAt: string;
+  status: string;
+  created_at: string;
+  date_from?: string;
+  date_to?: string;
+  source?: string;
 }
+
+const getStatusColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "completed":
+      return "success";
+    case "in_progress":
+      return "warning";
+    case "pending":
+      return "info";
+    default:
+      return "default";
+  }
+};
 
 const TaskList: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -30,33 +47,24 @@ const TaskList: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/tasks/");
+        if (!response.ok) {
+          throw new Error("Failed to fetch tasks");
+        }
+        const data = await response.json();
+        console.log("Fetched tasks:", data); // Debug log
+        setTasks(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchTasks();
   }, []);
-
-  const fetchTasks = async () => {
-    try {
-      const response = await axios.get("http://localhost:8000/api/tasks/");
-      setTasks(response.data);
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      setError("Failed to fetch tasks");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusColor = (
-    status: Task["status"],
-  ): "primary" | "warning" | "success" => {
-    switch (status) {
-      case "completed":
-        return "success";
-      case "in_progress":
-        return "warning";
-      default:
-        return "primary";
-    }
-  };
 
   if (loading) {
     return (
@@ -64,7 +72,7 @@ const TaskList: React.FC = () => {
         display='flex'
         justifyContent='center'
         alignItems='center'
-        minHeight='100vh'
+        minHeight='200px'
       >
         <CircularProgress />
       </Box>
@@ -73,12 +81,7 @@ const TaskList: React.FC = () => {
 
   if (error) {
     return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='100vh'
-      >
+      <Box sx={{ mt: 4 }}>
         <Typography color='error'>{error}</Typography>
       </Box>
     );
@@ -86,56 +89,71 @@ const TaskList: React.FC = () => {
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
+      <Box
+        display='flex'
+        justifyContent='space-between'
+        alignItems='center'
+        mb={3}
+      >
         <Typography variant='h4'>Tasks</Typography>
         <Button
           variant='contained'
           color='primary'
           onClick={() => navigate("/create")}
         >
-          Create New Task
+          Create Task
         </Button>
       </Box>
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
               <TableCell>Title</TableCell>
-              <TableCell>Description</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Created At</TableCell>
+              <TableCell>Date Range</TableCell>
+              <TableCell>Created</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {tasks.map((task) => (
-              <TableRow key={task.id}>
-                <TableCell>{task.title}</TableCell>
-                <TableCell>{task.description}</TableCell>
-                <TableCell>
-                  <Button
-                    variant='outlined'
-                    color={getStatusColor(task.status)}
-                    size='small'
-                  >
-                    {task.status.replace("_", " ")}
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  {new Date(task.createdAt).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant='outlined'
-                    color='primary'
-                    size='small'
-                    onClick={() => navigate(`/task/${task.id}`)}
-                  >
-                    View Details
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {tasks.map((task) => {
+              console.log("Task dates:", {
+                created_at: task.created_at,
+                date_from: task.date_from,
+                date_to: task.date_to,
+              }); // Debug log
+              return (
+                <TableRow key={task.id}>
+                  <TableCell>{task.title}</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={task.status}
+                      color={getStatusColor(task.status)}
+                      size='small'
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {task.date_from
+                      ? `${formatDate(task.date_from)} - ${formatDate(
+                          task.date_to,
+                        )}`
+                      : "No date range"}
+                  </TableCell>
+                  <TableCell>{formatDate(task.created_at, true)}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant='outlined'
+                      color='primary'
+                      size='small'
+                      onClick={() => navigate(`/task/${task.id}`)}
+                    >
+                      View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>

@@ -7,71 +7,54 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Chip,
 } from "@mui/material";
-import { EcommerceSale } from "../services/dataService";
+import { Order } from "../types";
 
 interface SalesTableProps {
-  sales: EcommerceSale[];
+  orders: Order[];
 }
 
-const SalesTable: React.FC<SalesTableProps> = ({ sales }) => {
+export default function SalesTable({ orders }: SalesTableProps) {
   return (
     <TableContainer component={Paper}>
       <Table>
         <TableHead>
           <TableRow>
             <TableCell>Order ID</TableCell>
-            <TableCell>Platform</TableCell>
+            <TableCell>Source</TableCell>
+            <TableCell>Date</TableCell>
             <TableCell>Product</TableCell>
             <TableCell>Category</TableCell>
-            <TableCell align='right'>Price</TableCell>
-            <TableCell align='right'>Quantity</TableCell>
-            <TableCell align='right'>Total</TableCell>
-            <TableCell>Date</TableCell>
+            <TableCell>Quantity</TableCell>
+            <TableCell align='right'>Unit Price</TableCell>
+            <TableCell align='right'>Total Amount</TableCell>
+            <TableCell>Customer</TableCell>
             <TableCell>Country</TableCell>
-            <TableCell>Status</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {sales.map((sale) => (
-            <TableRow key={sale.id}>
-              <TableCell>{sale.orderId}</TableCell>
+          {orders.map((order) => (
+            <TableRow key={order.id}>
+              <TableCell>{order.order_id}</TableCell>
+              <TableCell>{order.source}</TableCell>
               <TableCell>
-                <Chip
-                  label={sale.platform}
-                  color={sale.platform === "Etsy" ? "primary" : "secondary"}
-                  size='small'
-                />
+                {new Date(order.order_date).toLocaleDateString()}
               </TableCell>
-              <TableCell>{sale.productName}</TableCell>
-              <TableCell>{sale.category}</TableCell>
-              <TableCell align='right'>${sale.price.toFixed(2)}</TableCell>
-              <TableCell align='right'>{sale.quantity}</TableCell>
+              <TableCell>{order.product_name}</TableCell>
+              <TableCell>{order.product_category}</TableCell>
+              <TableCell>{order.quantity}</TableCell>
               <TableCell align='right'>
-                ${sale.totalAmount.toFixed(2)}
+                ${order.unit_price.toFixed(2)}
               </TableCell>
-              <TableCell>{new Date(sale.date).toLocaleDateString()}</TableCell>
-              <TableCell>{sale.customerCountry}</TableCell>
-              <TableCell>
-                <Chip
-                  label={sale.status}
-                  color={
-                    sale.status === "Completed"
-                      ? "success"
-                      : sale.status === "Processing"
-                      ? "warning"
-                      : "info"
-                  }
-                  size='small'
-                />
+              <TableCell align='right'>
+                ${order.total_amount.toFixed(2)}
               </TableCell>
+              <TableCell>{order.customer_id}</TableCell>
+              <TableCell>{order.customer_country}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </TableContainer>
   );
-};
-
-export default SalesTable;
+}
