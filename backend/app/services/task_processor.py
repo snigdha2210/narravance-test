@@ -126,8 +126,6 @@ class TaskProcessor:
             
             # Filter orders based on task parameters
             filtered_orders = []
-            start_date = task.date_from or datetime.utcnow() - timedelta(days=30)
-            end_date = task.date_to or datetime.utcnow()
             
             # Handle filters
             filters = task.source_a_filters
@@ -147,11 +145,12 @@ class TaskProcessor:
                 # Convert string date to datetime object
                 order_date = datetime.fromisoformat(order['order_date'].replace('Z', '+00:00'))
                 
-                # Apply date filter
-                if not (start_date <= order_date <= end_date):
-                    continue
+                # Apply date filter only if dates are specified
+                if task.date_from and task.date_to:
+                    if not (task.date_from <= order_date <= task.date_to):
+                        continue
                 
-                # Apply category filter
+                # Apply category filter only if categories are specified
                 if categories and order['product_category'] not in categories:
                     continue
                 
@@ -159,6 +158,7 @@ class TaskProcessor:
                 order['quantity'] = int(order['quantity'])
                 order['unit_price'] = float(order['unit_price'])
                 order['total_amount'] = float(order['total_amount'])
+                order['source'] = 'source_a'
                 
                 # Update the order_date in the order dict
                 order['order_date'] = order_date
@@ -193,6 +193,7 @@ class TaskProcessor:
                     row['quantity'] = int(row['quantity'])
                     row['unit_price'] = float(row['unit_price'])
                     row['total_amount'] = float(row['total_amount'])
+                    row['source'] = 'source_b'
                     
                     # Update the order_date in the row
                     row['order_date'] = order_date
@@ -201,8 +202,6 @@ class TaskProcessor:
             
             # Filter orders based on task parameters
             filtered_orders = []
-            start_date = task.date_from or datetime.utcnow() - timedelta(days=30)
-            end_date = task.date_to or datetime.utcnow()
             
             # Handle filters
             filters = task.source_b_filters
@@ -219,13 +218,12 @@ class TaskProcessor:
             await asyncio.sleep(random.uniform(1, 2))
             
             for order in orders:
-                order_date = order['order_date']
+                # Apply date filter only if dates are specified
+                if task.date_from and task.date_to:
+                    if not (task.date_from <= order['order_date'] <= task.date_to):
+                        continue
                 
-                # Apply date filter
-                if not (start_date <= order_date <= end_date):
-                    continue
-                
-                # Apply category filter
+                # Apply category filter only if categories are specified
                 if categories and order['product_category'] not in categories:
                     continue
                 
