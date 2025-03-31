@@ -307,5 +307,3 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
-
-// the date range is not selectable to the user and the error that there are no tasks in the date range is coming. there should'nt be any a date range in the dashboard. just show all the completed tasks in the dropdown for the user to select from

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Box,
   Paper,
@@ -14,7 +14,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress,
   styled,
   useTheme,
 } from "@mui/material";
@@ -32,10 +31,10 @@ import {
 } from "recharts";
 import { Order } from "../types";
 import { styled as muiStyled, alpha } from "@mui/material/styles";
-import { fetchOrdersByTaskId } from "../services/dataService.ts";
 
 interface TaskDataVisualizationProps {
   taskId: number;
+  orders: Order[];
 }
 
 const StyledTableRow = styled(TableRow)<{ source: string }>(
@@ -82,46 +81,16 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   },
 }));
 
-const POLLING_INTERVAL = 5000; // Poll every 5 seconds
-
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
+  orders,
 }) => {
   const theme = useTheme();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({
     dateRange: "all",
     source: "all",
     category: "all",
   });
-
-  const fetchData = async () => {
-    try {
-      const data = await fetchOrdersByTaskId(taskId);
-      setOrders(data);
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      // Only set error if we don't have any data yet
-      if (orders.length === 0) {
-        setError("Failed to fetch orders");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-
-    // Set up polling
-    const pollInterval = setInterval(fetchData, POLLING_INTERVAL);
-
-    // Cleanup polling on component unmount
-    return () => clearInterval(pollInterval);
-  }, [taskId]); // Re-run effect if taskId changes
 
   const filterData = (data: Order[]) => {
     const filtered = data.filter((order) => {
@@ -142,7 +111,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
       return dateMatch && sourceMatch && categoryMatch;
     });
-    console.log("Filtered orders:", filtered);
     return filtered;
   };
 
@@ -227,27 +195,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       source_specific_data: JSON.parse(order.source_specific_data),
     }));
   };
-
-  if (loading) {
-    return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='200px'
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ mt: 4 }}>
-        <Typography color='error'>{error}</Typography>
-      </Box>
-    );
-  }
 
   const filteredOrders = filterData(orders);
   const timeSeriesData = prepareTimeSeriesData(filteredOrders);

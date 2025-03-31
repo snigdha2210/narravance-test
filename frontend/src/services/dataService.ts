@@ -102,6 +102,20 @@ export const calculateDashboardStats = (orders: Order[]): DashboardStats => {
   };
 };
 
+export const fetchTask = async (taskId: number): Promise<Task> => {
+  const response = await fetch(`${config.apiUrl}/api/tasks/${taskId}`, {
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch task");
+  }
+  return response.json();
+};
+
 export const fetchTasks = async (): Promise<Task[]> => {
   const response = await fetch(`${config.apiUrl}/api/tasks`, {
     headers: {

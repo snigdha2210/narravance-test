@@ -1,170 +1,156 @@
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 import {
-  Box,
-  Paper,
-  Typography,
-  Button,
-  Chip,
-  Grid,
-  CircularProgress,
   Container,
+  Typography,
+  Box,
+  CircularProgress,
+  Paper,
+  Button,
 } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import TaskProgress from "../components/TaskProgress.tsx";
 import TaskDataVisualization from "../components/TaskDataVisualization.tsx";
-import { formatDate } from "../utils/dateUtils.ts";
-import { Task } from "../types.ts";
-import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
-
-const POLLING_INTERVAL = 5000; // Poll every 5 seconds
-
-const getStatusColor = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "completed":
-      return "success";
-    case "in_progress":
-      return "warning";
-    case "pending":
-      return "info";
-    default:
-      return "default";
-  }
-};
+import { Task, Order } from "../types.ts";
+import { fetchTask, fetchOrdersByTaskId } from "../services/dataService.ts";
 
 const TaskDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [task, setTask] = useState<Task | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTask = async () => {
-    if (!id) return;
-
-    try {
-      const response = await fetch(`http://localhost:8000/api/tasks/${id}`);
-      if (!response.ok) {
-        throw new Error("Failed to fetch task");
-      }
-      const data = await response.json();
-      setTask(data);
-      setError(null);
-    } catch (err) {
-      console.error(err);
-      // Only set error if we don't have task data yet
-      if (!task) {
-        setError("Failed to fetch task");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchTask();
+    const fetchData = async () => {
+      if (!id) return;
 
-    // Set up polling
-    const pollInterval = setInterval(fetchTask, POLLING_INTERVAL);
+      setLoading(true);
+      try {
+        const taskData = await fetchTask(parseInt(id));
+        setTask(taskData);
 
-    // Cleanup polling on component unmount
-    return () => clearInterval(pollInterval);
-  }, [id]); // Re-run effect if task ID changes
+        if (taskData.status === "completed") {
+          const ordersData = await fetchOrdersByTaskId(parseInt(id));
+          setOrders(ordersData);
+        }
 
-  if (loading) {
-    return (
-      <Box
-        display='flex'
-        justifyContent='center'
-        alignItems='center'
-        minHeight='100vh'
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+        setError(null);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to fetch task details");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (error || !task) {
-    return (
-      <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
+    fetchData();
+  }, [id]);
+
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <Box display='flex' justifyContent='center' my={4}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    if (!task) {
+      return (
+        <Typography color='error' align='center'>
+          Task not found
+        </Typography>
+      );
+    }
+
+    if (task.status !== "completed") {
+      return (
         <Paper sx={{ p: 4, textAlign: "center" }}>
-          <Typography color='error' gutterBottom>
-            {error || "Task not found"}
+          <Typography variant='h6' gutterBottom>
+            Task is {task.status === "pending" ? "Pending" : "In Progress"}
           </Typography>
-          <Button
-            component={RouterLink}
-            to='/tasks'
-            variant='contained'
-            sx={{ mt: 2 }}
-          >
-            Back to Tasks
-          </Button>
-        </Paper>
-      </Container>
-    );
-  }
-
-  console.log("Task status:", task.status);
-  console.log("Task completed_at:", task.completed_at);
-  console.log("Categories:", task.source_a_filters.categories);
-  console.log("Categories:", task.source_b_filters.categories);
-
-  return (
-    <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Button
-          component={RouterLink}
-          to='/tasks'
-          variant='outlined'
-          sx={{ mb: 2 }}
-        >
-          Back to Tasks
-        </Button>
-
-        <Paper sx={{ p: 4 }}>
-          <Typography variant='h4' gutterBottom>
-            {task.title}
+          <Typography variant='body1' color='text.secondary'>
+            {task.status === "pending"
+              ? "Your task is queued and will start processing soon."
+              : "Your task is currently being processed. Please wait for it to complete."}
           </Typography>
-
-          <Box sx={{ my: 4 }}>
+          <Box mt={3}>
             <TaskProgress
-              status={task.status.toLowerCase() as TaskStatus}
+              status={task.status as "pending" | "in_progress" | "completed"}
               size='large'
             />
           </Box>
-
-          <Typography variant='body1' color='text.secondary' paragraph>
-            {task.description}
-          </Typography>
-
-          <Box sx={{ mt: 2 }}>
-            <Typography variant='subtitle2' color='text.secondary'>
-              Created: {new Date(task.created_at).toLocaleString()}
-            </Typography>
-            {task.completed_at && (
-              <Typography variant='subtitle2' color='text.secondary'>
-                Completed: {new Date(task.completed_at).toLocaleString()}
-              </Typography>
-            )}
-            {task.date_from && task.date_to && (
-              <Typography variant='subtitle2' color='text.secondary'>
-                Date Range: {new Date(task.date_from).toLocaleDateString()} -{" "}
-                {new Date(task.date_to).toLocaleDateString()}
-              </Typography>
-            )}
-            {(task.source_a_filters?.categories?.length > 0 ||
-              task.source_b_filters?.categories?.length > 0) && (
-              <Typography variant='subtitle2' color='text.secondary'>
-                Categories:{" "}
-                {[
-                  ...(task.source_a_filters?.categories || []),
-                  ...(task.source_b_filters?.categories || []),
-                ].join(", ")}
-              </Typography>
-            )}
-          </Box>
         </Paper>
-      </Box>
+      );
+    }
 
-      <TaskDataVisualization taskId={task.id} />
+    if (error) {
+      return (
+        <Typography color='error' align='center'>
+          {error}
+        </Typography>
+      );
+    }
+
+    if (!orders || orders.length === 0) {
+      return (
+        <Paper sx={{ p: 4, textAlign: "center" }}>
+          <Typography variant='h6' gutterBottom>
+            No Orders Found
+          </Typography>
+          <Typography variant='body1' color='text.secondary'>
+            This task has completed but no orders were found matching your
+            criteria.
+          </Typography>
+        </Paper>
+      );
+    }
+
+    return (
+      <>
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Typography variant='h6' gutterBottom>
+            Task Information
+          </Typography>
+          <Typography>
+            Status: <strong>{task.status}</strong>
+          </Typography>
+          <Typography>
+            Created: {new Date(task.created_at).toLocaleString()}
+          </Typography>
+          {task.completed_at && (
+            <Typography>
+              Completed: {new Date(task.completed_at).toLocaleString()}
+            </Typography>
+          )}
+        </Paper>
+
+        <TaskDataVisualization taskId={task.id} orders={orders} />
+      </>
+    );
+  };
+
+  return (
+    <Container maxWidth='xl' sx={{ mt: 4, mb: 4 }}>
+      <Box
+        display='flex'
+        justifyContent='space-between'
+        alignItems='center'
+        mb={3}
+      >
+        <Typography variant='h4'>
+          Task Details {task && `- ${task.title}`}
+        </Typography>
+        <Button
+          variant='outlined'
+          color='primary'
+          onClick={() => navigate("/tasks")}
+        >
+          Back to Tasks
+        </Button>
+      </Box>
+      {renderContent()}
     </Container>
   );
 };
