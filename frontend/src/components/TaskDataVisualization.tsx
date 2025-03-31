@@ -15,6 +15,8 @@ import {
   TableHead,
   TableRow,
   CircularProgress,
+  styled,
+  useTheme,
 } from "@mui/material";
 import {
   LineChart,
@@ -29,7 +31,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Order } from "../types";
-import { styled, alpha } from "@mui/material/styles";
+import { styled as muiStyled, alpha } from "@mui/material/styles";
+import { fetchOrdersByTaskId } from "../services/dataService.ts";
 
 interface TaskDataVisualizationProps {
   taskId: number;
@@ -39,17 +42,14 @@ const StyledTableRow = styled(TableRow)<{ source: string }>(
   ({ theme, source }) => ({
     "backgroundColor":
       source === "source_a"
-        ? alpha("#8884d8", 0.1) // Same purple as visualization
-        : source === "source_b"
-        ? alpha("#82ca9d", 0.1) // Same green as visualization
-        : "inherit",
+        ? theme.palette.sourceA.background
+        : theme.palette.sourceB.background,
     "&:hover": {
       backgroundColor:
         source === "source_a"
-          ? alpha("#8884d8", 0.2)
-          : source === "source_b"
-          ? alpha("#82ca9d", 0.2)
-          : theme.palette.action.hover,
+          ? theme.palette.sourceA.light
+          : theme.palette.sourceB.light,
+      opacity: 0.9,
     },
   }),
 );
@@ -58,11 +58,34 @@ const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.primary.contrastText,
   fontWeight: "bold",
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
+}));
+
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  "maxHeight": 400,
+  "overflow": "auto",
+  "&::-webkit-scrollbar": {
+    width: "8px",
+    height: "8px",
+  },
+  "&::-webkit-scrollbar-track": {
+    backgroundColor: theme.palette.grey[100],
+  },
+  "&::-webkit-scrollbar-thumb": {
+    "backgroundColor": theme.palette.grey[400],
+    "borderRadius": "4px",
+    "&:hover": {
+      backgroundColor: theme.palette.grey[500],
+    },
+  },
 }));
 
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
 }) => {
+  const theme = useTheme();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,22 +98,12 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log("Fetching data for task ID:", taskId);
-        const response = await fetch(
-          `http://localhost:8000/api/tasks/${taskId}/data`,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch orders");
-        }
-        const data = await response.json();
-        console.log("Fetched orders:", data);
-        console.log("Unique source values:", [
-          ...new Set(data.map((o: Order) => o.source)),
-        ]);
+        const data = await fetchOrdersByTaskId(taskId);
         setOrders(data);
+        setError(null);
       } catch (err) {
-        console.error("Error fetching orders:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch orders");
+        setError("Failed to fetch orders");
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -309,13 +322,13 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 <Line
                   type='monotone'
                   dataKey='source_a'
-                  stroke='#8884d8'
+                  stroke={theme.palette.sourceA.main}
                   name='Shopify Sales ($)'
                 />
                 <Line
                   type='monotone'
                   dataKey='source_b'
-                  stroke='#82ca9d'
+                  stroke={theme.palette.sourceB.main}
                   name='Etsy Sales ($)'
                 />
               </LineChart>
@@ -338,10 +351,14 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
                 <Legend />
                 <Bar
                   dataKey='source_a'
-                  fill='#8884d8'
+                  fill={theme.palette.sourceA.main}
                   name='Shopify Sales ($)'
                 />
-                <Bar dataKey='source_b' fill='#82ca9d' name='Etsy Sales ($)' />
+                <Bar
+                  dataKey='source_b'
+                  fill={theme.palette.sourceB.main}
+                  name='Etsy Sales ($)'
+                />
               </BarChart>
             </ResponsiveContainer>
           </Paper>
@@ -390,54 +407,47 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
             <Typography variant='h6' gutterBottom>
               Detailed Order Data
             </Typography>
-            <TableContainer component={Paper} sx={{ mt: 3 }}>
-              <Table>
+            <StyledTableContainer>
+              <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Date</StyledTableHeaderCell>
                     <StyledTableHeaderCell>Source</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Date</StyledTableHeaderCell>
                     <StyledTableHeaderCell>Product</StyledTableHeaderCell>
                     <StyledTableHeaderCell>Category</StyledTableHeaderCell>
-                    <StyledTableHeaderCell align='right'>
-                      Quantity
-                    </StyledTableHeaderCell>
-                    <StyledTableHeaderCell align='right'>
-                      Unit Price ($)
-                    </StyledTableHeaderCell>
-                    <StyledTableHeaderCell align='right'>
-                      Total Amount ($)
-                    </StyledTableHeaderCell>
-                    <StyledTableHeaderCell>Customer ID</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Quantity</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Unit Price</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Total Amount</StyledTableHeaderCell>
+                    <StyledTableHeaderCell>Customer</StyledTableHeaderCell>
                     <StyledTableHeaderCell>Country</StyledTableHeaderCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {detailedTableData.map((order) => (
-                    <StyledTableRow key={order.order_id} source={order.source}>
+                    <StyledTableRow
+                      key={`${order.source}-${order.order_id}`}
+                      source={order.source}
+                    >
                       <TableCell>{order.order_id}</TableCell>
-                      <TableCell>
-                        {new Date(order.order_date).toLocaleDateString()}
-                      </TableCell>
                       <TableCell>
                         {order.source === "source_a" ? "Shopify" : "Etsy"}
                       </TableCell>
+                      <TableCell>
+                        {new Date(order.order_date).toLocaleString()}
+                      </TableCell>
                       <TableCell>{order.product_name}</TableCell>
                       <TableCell>{order.product_category}</TableCell>
-                      <TableCell align='right'>{order.quantity}</TableCell>
-                      <TableCell align='right'>
-                        {order.unit_price.toFixed(2)}
-                      </TableCell>
-                      <TableCell align='right'>
-                        {order.total_amount.toFixed(2)}
-                      </TableCell>
+                      <TableCell>{order.quantity}</TableCell>
+                      <TableCell>${order.unit_price.toFixed(2)}</TableCell>
+                      <TableCell>${order.total_amount.toFixed(2)}</TableCell>
                       <TableCell>{order.customer_id}</TableCell>
                       <TableCell>{order.customer_country}</TableCell>
                     </StyledTableRow>
                   ))}
                 </TableBody>
               </Table>
-            </TableContainer>
+            </StyledTableContainer>
           </Paper>
         </Grid>
       </Grid>

@@ -7,82 +7,105 @@ import {
   TableHead,
   TableRow,
   Paper,
+  styled,
 } from "@mui/material";
-import { styled, alpha } from "@mui/material/styles";
 import { Order } from "../types";
+
+interface SalesTableProps {
+  orders: Order[];
+}
+
+const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  fontWeight: "bold",
+  // Make header sticky
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
+}));
+
+const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
+  "maxHeight": 400,
+  "overflow": "auto",
+  // Add shadow to indicate scrollable content
+  "&::-webkit-scrollbar": {
+    width: "8px",
+    height: "8px",
+  },
+  "&::-webkit-scrollbar-track": {
+    backgroundColor: theme.palette.grey[100],
+  },
+  "&::-webkit-scrollbar-thumb": {
+    "backgroundColor": theme.palette.grey[400],
+    "borderRadius": "4px",
+    "&:hover": {
+      backgroundColor: theme.palette.grey[500],
+    },
+  },
+}));
 
 const StyledTableRow = styled(TableRow)<{ source: string }>(
   ({ theme, source }) => ({
     "backgroundColor":
       source === "source_a"
-        ? alpha("#8884d8", 0.1) // Shopify green with opacity
-        : source === "source_b"
-        ? alpha("#82ca9d", 0.1) // Etsy pink with opacity
-        : "inherit",
+        ? theme.palette.sourceA.background
+        : theme.palette.sourceB.background,
     "&:hover": {
       backgroundColor:
         source === "source_a"
-          ? alpha("#8884d8", 0.2)
-          : source === "source_b"
-          ? alpha("#82ca9d", 0.2)
-          : theme.palette.action.hover,
+          ? theme.palette.sourceA.light
+          : theme.palette.sourceB.light,
+      opacity: 0.9,
     },
   }),
 );
 
-interface SalesTableProps {
-  orders: Order[];
-}
-const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
-  backgroundColor: theme.palette.primary.main,
-  color: theme.palette.primary.contrastText,
-  fontWeight: "bold",
-}));
-
 const SalesTable: React.FC<SalesTableProps> = ({ orders }) => {
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <StyledTableHeaderCell>Source</StyledTableHeaderCell>
-            <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
-            <StyledTableHeaderCell>Date</StyledTableHeaderCell>
-            <StyledTableHeaderCell>Product</StyledTableHeaderCell>
-            <StyledTableHeaderCell>Category</StyledTableHeaderCell>
-            <StyledTableHeaderCell align='right'>
-              Quantity
-            </StyledTableHeaderCell>
-            <StyledTableHeaderCell align='right'>
-              Unit Price
-            </StyledTableHeaderCell>
-            <StyledTableHeaderCell align='right'>Total</StyledTableHeaderCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {orders.map((order) => (
-            <StyledTableRow key={order.id} source={order.source}>
-              <TableCell>
-                {order.source === "source_a" ? "Shopify" : "Etsy"}
-              </TableCell>
-              <TableCell>{order.order_id}</TableCell>
-              <TableCell>
-                {new Date(order.order_date).toLocaleDateString()}
-              </TableCell>
-              <TableCell>{order.product_name}</TableCell>
-              <TableCell>{order.product_category}</TableCell>
-              <TableCell align='right'>{order.quantity}</TableCell>
-              <TableCell align='right'>
-                ${order.unit_price.toFixed(2)}
-              </TableCell>
-              <TableCell align='right'>
-                ${order.total_amount.toFixed(2)}
-              </TableCell>
-            </StyledTableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Paper>
+      <StyledTableContainer>
+        <Table stickyHeader>
+          <TableHead>
+            <TableRow>
+              <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Source</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Date</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Product</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Category</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Quantity</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Unit Price</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Total Amount</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Customer</StyledTableHeaderCell>
+              <StyledTableHeaderCell>Country</StyledTableHeaderCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {orders.map((order) => (
+              <StyledTableRow
+                key={`${order.source}-${order.order_id}`}
+                source={order.source}
+              >
+                <TableCell>{order.order_id}</TableCell>
+                <TableCell>
+                  {order.source === "source_a" ? "Source A" : "Source B"}
+                </TableCell>
+                <TableCell>
+                  {new Date(order.order_date).toLocaleString()}
+                </TableCell>
+                <TableCell>{order.product_name}</TableCell>
+                <TableCell>{order.product_category}</TableCell>
+                <TableCell>{order.quantity}</TableCell>
+                <TableCell>${order.unit_price.toFixed(2)}</TableCell>
+                <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                <TableCell>{order.customer_id}</TableCell>
+                <TableCell>{order.customer_country}</TableCell>
+              </StyledTableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </StyledTableContainer>
+    </Paper>
   );
 };
 
