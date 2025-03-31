@@ -1,32 +1,5 @@
 import { createTheme } from "@mui/material/styles";
 
-declare module "@mui/material/styles" {
-  interface Palette {
-    sourceA: {
-      main: string;
-      light: string;
-      background: string;
-    };
-    sourceB: {
-      main: string;
-      light: string;
-      background: string;
-    };
-  }
-  interface PaletteOptions {
-    sourceA: {
-      main: string;
-      light: string;
-      background: string;
-    };
-    sourceB: {
-      main: string;
-      light: string;
-      background: string;
-    };
-  }
-}
-
 const theme = createTheme({
   palette: {
     primary: {
@@ -40,14 +13,16 @@ const theme = createTheme({
       dark: "#7b1fa2",
     },
     sourceA: {
-      main: "#1976d2",
-      light: "#42a5f5",
-      background: "rgba(25, 118, 210, 0.08)",
+      main: "#9c27b0",
+      light: "#ba68c8",
+      dark: "#7b1fa2",
+      background: "rgba(156, 39, 176, 0.08)",
     },
     sourceB: {
-      main: "#2e7d32",
-      light: "#4caf50",
-      background: "rgba(46, 125, 50, 0.08)",
+      main: "#f57c00",
+      light: "#ff9800",
+      dark: "#ef6c00",
+      background: "rgba(245, 124, 0, 0.08)",
     },
   },
   components: {

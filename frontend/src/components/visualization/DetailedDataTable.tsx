@@ -26,11 +26,7 @@ interface DetailedDataTableProps {
   onExportCSV: () => void;
 }
 
-interface StyledTableRowProps {
-  source: "source_a" | "source_b";
-}
-
-const StyledTableRow = styled(TableRow)<StyledTableRowProps>(
+const StyledTableRow = styled(TableRow)<{ source: "source_a" | "source_b" }>(
   ({ theme, source }) => ({
     "backgroundColor":
       source === "source_a"
@@ -51,6 +47,16 @@ const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
   color: theme.palette.common.white,
   fontWeight: "bold",
 }));
+
+const SourceCell = styled(TableCell)<{ source: "source_a" | "source_b" }>(
+  ({ theme, source }) => ({
+    color:
+      source === "source_a"
+        ? theme.palette.sourceA.main
+        : theme.palette.sourceB.light,
+    fontWeight: "bold",
+  }),
+);
 
 const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
   orders,
@@ -155,9 +161,11 @@ const DetailedDataTable: React.FC<DetailedDataTableProps> = ({
                 <TableCell>{formatDateToEST(order.order_date)}</TableCell>
                 <TableCell>${order.total_amount.toFixed(2)}</TableCell>
                 <TableCell>{order.product_category}</TableCell>
-                <TableCell>
+                <SourceCell
+                  source={order.source === "source_a" ? "source_a" : "source_b"}
+                >
                   {order.source === "source_a" ? "Shopify" : "Etsy"}
-                </TableCell>
+                </SourceCell>
               </StyledTableRow>
             ))}
           </TableBody>
