@@ -20,6 +20,8 @@ import {
   Stack,
   IconButton,
   Tooltip,
+  Button,
+  ButtonGroup,
 } from "@mui/material";
 import {
   LineChart,
@@ -32,31 +34,36 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceArea,
   ReferenceLine,
+  AreaChart,
+  Area,
 } from "recharts";
 import { Order as OrderData } from "../types";
-import { styled as muiStyled, alpha } from "@mui/material/styles";
+
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import FullscreenIcon from "@mui/icons-material/Fullscreen";
 import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
+import PrintIcon from "@mui/icons-material/Print";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 
 interface TaskDataVisualizationProps {
   taskId: number;
   orders: OrderData[];
+  taskStartDate?: string | null;
+  taskEndDate?: string | null;
 }
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
   "&.source-a": {
-    "backgroundColor": alpha(theme.palette.sourceA.main, 0.1),
+    "backgroundColor": theme.palette.sourceA.background,
     "&:hover": {
       backgroundColor: theme.palette.sourceA.light,
     },
   },
   "&.source-b": {
-    "backgroundColor": alpha(theme.palette.sourceB.main, 0.1),
+    "backgroundColor": theme.palette.sourceB.background,
     "&:hover": {
       backgroundColor: theme.palette.sourceB.light,
     },
@@ -69,25 +76,6 @@ const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
   fontWeight: "bold",
 }));
 
-const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
-  "maxHeight": 400,
-  "overflow": "auto",
-  "&::-webkit-scrollbar": {
-    width: "8px",
-    height: "8px",
-  },
-  "&::-webkit-scrollbar-track": {
-    backgroundColor: theme.palette.grey[100],
-  },
-  "&::-webkit-scrollbar-thumb": {
-    "backgroundColor": theme.palette.grey[400],
-    "borderRadius": "4px",
-    "&:hover": {
-      backgroundColor: theme.palette.grey[500],
-    },
-  },
-}));
-
 // Add type for sort order
 type SortOrder = "asc" | "desc";
 
@@ -97,17 +85,35 @@ interface TableSortConfig {
   order: SortOrder;
 }
 
+// Add new interfaces for chart features
+interface ChartAnnotation {
+  x: string;
+  y: number;
+  text: string;
+  color: string;
+}
+
+interface ChartConfig {
+  type: "line" | "bar" | "area" | "composed";
+  showSourceA: boolean;
+  showSourceB: boolean;
+  showTrendLine: boolean;
+  annotations: ChartAnnotation[];
+}
+
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
   orders,
+  taskStartDate,
+  taskEndDate,
 }) => {
   const theme = useTheme();
   const [filters, setFilters] = useState({
     dateRange: "all" as "all" | "30days" | "custom",
     source: "all",
     category: "all",
-    startDate: null as Date | null,
-    endDate: null as Date | null,
+    startDate: taskStartDate ? new Date(taskStartDate) : null,
+    endDate: taskEndDate ? new Date(taskEndDate) : null,
   });
 
   // Add states for sorting and interactivity
@@ -116,7 +122,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     order: "desc",
   });
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
-  const [selectedDataPoint, setSelectedDataPoint] = useState<any>(null);
 
   // Add new state for source table sorting
   const [sourceTableSort, setSourceTableSort] = useState<{
@@ -125,6 +130,15 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   }>({
     field: "total",
     order: "desc",
+  });
+
+  // Add new state for chart configuration
+  const [chartConfig, setChartConfig] = useState<ChartConfig>({
+    type: "line",
+    showSourceA: true,
+    showSourceB: true,
+    showTrendLine: false,
+    annotations: [],
   });
 
   const filterData = (data: OrderData[]) => {
@@ -230,13 +244,6 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     }, {} as Record<string, { source: string; total: number; orders: number; averageOrderValue: number }>);
 
     return Object.values(sourceData);
-  };
-
-  const prepareDetailedTableData = (orders: OrderData[]) => {
-    return orders.map((order) => ({
-      ...order,
-      source_specific_data: JSON.parse(order.source_specific_data),
-    }));
   };
 
   // Add sorting function
@@ -356,6 +363,32 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     return null;
   };
 
+  // Add function to handle annotation
+  const handleAddAnnotation = (data: any) => {
+    if (!data) return;
+
+    // Get the value based on which source is being displayed
+    const value =
+      data.source_a !== undefined
+        ? data.source_a
+        : data.source_b !== undefined
+        ? data.source_b
+        : data.amount;
+
+    if (value !== undefined && value !== null) {
+      const newAnnotation: ChartAnnotation = {
+        x: data.date,
+        y: value,
+        text: `$${value.toFixed(2)}`,
+        color: theme.palette.primary.main,
+      };
+      setChartConfig((prev) => ({
+        ...prev,
+        annotations: [...prev.annotations, newAnnotation],
+      }));
+    }
+  };
+
   // Modify the detailed data table to include sorting
   const renderDetailedDataTable = () => (
     <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400 }}>
@@ -443,9 +476,10 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     </TableContainer>
   );
 
-  // Modify the time series chart to be more interactive
+  // Modify the time series chart to include new features
   const renderTimeSeriesChart = () => {
     const data = prepareTimeSeriesData(filterData(orders));
+
     return (
       <Paper sx={{ p: 2, position: "relative" }}>
         <Box
@@ -455,78 +489,254 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
           mb={2}
         >
           <Typography variant='h6'>Sales Over Time</Typography>
-          <Tooltip
-            title={
-              expandedChart === "timeSeries"
-                ? "Exit Fullscreen"
-                : "Enter Fullscreen"
-            }
-          >
-            <IconButton
-              onClick={() =>
-                setExpandedChart(
-                  expandedChart === "timeSeries" ? null : "timeSeries",
-                )
+          <Box display='flex' gap={2} alignItems='center'>
+            <ButtonGroup size='small'>
+              <Button
+                onClick={() =>
+                  setChartConfig((prev) => ({ ...prev, type: "line" }))
+                }
+                variant={chartConfig.type === "line" ? "contained" : "outlined"}
+              >
+                Line
+              </Button>
+              <Button
+                onClick={() =>
+                  setChartConfig((prev) => ({ ...prev, type: "area" }))
+                }
+                variant={chartConfig.type === "area" ? "contained" : "outlined"}
+              >
+                Area
+              </Button>
+              <Button
+                onClick={() =>
+                  setChartConfig((prev) => ({ ...prev, type: "bar" }))
+                }
+                variant={chartConfig.type === "bar" ? "contained" : "outlined"}
+              >
+                Bar
+              </Button>
+            </ButtonGroup>
+            <Tooltip
+              title={
+                expandedChart === "timeSeries"
+                  ? "Exit Fullscreen"
+                  : "Enter Fullscreen"
               }
             >
-              {expandedChart === "timeSeries" ? (
-                <FullscreenExitIcon />
-              ) : (
-                <FullscreenIcon />
-              )}
-            </IconButton>
-          </Tooltip>
+              <IconButton
+                onClick={() =>
+                  setExpandedChart(
+                    expandedChart === "timeSeries" ? null : "timeSeries",
+                  )
+                }
+              >
+                {expandedChart === "timeSeries" ? (
+                  <FullscreenExitIcon />
+                ) : (
+                  <FullscreenIcon />
+                )}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
         <ResponsiveContainer
           width='100%'
           height={expandedChart === "timeSeries" ? 600 : 300}
         >
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray='3 3' />
-            <XAxis
-              dataKey='date'
-              tickFormatter={(date) => new Date(date).toLocaleDateString()}
-            />
-            <YAxis />
-            <RechartsTooltip content={<CustomTooltip />} />
-            <Legend />
-            {selectedDataPoint && (
-              <ReferenceLine
-                x={selectedDataPoint.date}
-                stroke={theme.palette.primary.main}
-                strokeDasharray='3 3'
+          {chartConfig.type === "line" ? (
+            <LineChart
+              data={data}
+              onMouseDown={(e) => {
+                if (e && e.activePayload) {
+                  handleAddAnnotation(e.activePayload[0].payload);
+                }
+              }}
+            >
+              <CartesianGrid strokeDasharray='3 3' />
+              <XAxis
+                dataKey='date'
+                tickFormatter={(date) => new Date(date).toLocaleDateString()}
               />
-            )}
-            <Line
-              type='monotone'
-              dataKey='source_a'
-              stroke={theme.palette.sourceA.main}
-              name='Shopify Sales ($)'
-              dot={{ r: 4 }}
-              activeDot={{
-                r: 8,
-                onClick: (data) => setSelectedDataPoint(data.payload),
+              <YAxis />
+              <RechartsTooltip content={<CustomTooltip />} />
+              <Legend />
+              <Line
+                type='monotone'
+                dataKey='source_a'
+                stroke={theme.palette.sourceA.main}
+                name='Shopify Sales ($)'
+                dot={{ r: 4 }}
+                activeDot={{
+                  r: 8,
+                  onClick: (data) => handleAddAnnotation(data.payload),
+                }}
+              />
+              <Line
+                type='monotone'
+                dataKey='source_b'
+                stroke={theme.palette.sourceB.main}
+                name='Etsy Sales ($)'
+                dot={{ r: 4 }}
+                activeDot={{
+                  r: 8,
+                  onClick: (data) => handleAddAnnotation(data.payload),
+                }}
+              />
+              {chartConfig.annotations.map((annotation, index) => (
+                <ReferenceLine
+                  key={index}
+                  x={annotation.x}
+                  y={annotation.y}
+                  stroke={annotation.color}
+                  label={{
+                    value: annotation.text,
+                    position: "top",
+                    fill: annotation.color,
+                  }}
+                />
+              ))}
+            </LineChart>
+          ) : chartConfig.type === "area" ? (
+            <AreaChart
+              data={data}
+              onMouseDown={(e) => {
+                if (e && e.activePayload) {
+                  handleAddAnnotation(e.activePayload[0].payload);
+                }
               }}
-            />
-            <Line
-              type='monotone'
-              dataKey='source_b'
-              stroke={theme.palette.sourceB.main}
-              name='Etsy Sales ($)'
-              dot={{ r: 4 }}
-              activeDot={{
-                r: 8,
-                onClick: (data) => setSelectedDataPoint(data.payload),
+            >
+              <CartesianGrid strokeDasharray='3 3' />
+              <XAxis
+                dataKey='date'
+                tickFormatter={(date) => new Date(date).toLocaleDateString()}
+              />
+              <YAxis />
+              <RechartsTooltip content={<CustomTooltip />} />
+              <Legend />
+              <Area
+                type='monotone'
+                dataKey='source_a'
+                stroke={theme.palette.sourceA.main}
+                fill={theme.palette.sourceA.main}
+                fillOpacity={0.3}
+                name='Shopify Sales ($)'
+              />
+              <Area
+                type='monotone'
+                dataKey='source_b'
+                stroke={theme.palette.sourceB.main}
+                fill={theme.palette.sourceB.main}
+                fillOpacity={0.3}
+                name='Etsy Sales ($)'
+              />
+              {chartConfig.annotations.map((annotation, index) => (
+                <ReferenceLine
+                  key={index}
+                  x={annotation.x}
+                  y={annotation.y}
+                  stroke={annotation.color}
+                  label={{
+                    value: annotation.text,
+                    position: "top",
+                    fill: annotation.color,
+                  }}
+                />
+              ))}
+            </AreaChart>
+          ) : (
+            <BarChart
+              data={data}
+              onMouseDown={(e) => {
+                if (e && e.activePayload) {
+                  handleAddAnnotation(e.activePayload[0].payload);
+                }
               }}
-            />
-          </LineChart>
+            >
+              <CartesianGrid strokeDasharray='3 3' />
+              <XAxis
+                dataKey='date'
+                tickFormatter={(date) => new Date(date).toLocaleDateString()}
+              />
+              <YAxis />
+              <RechartsTooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar
+                dataKey='source_a'
+                fill={theme.palette.sourceA.main}
+                name='Shopify Sales ($)'
+              />
+              <Bar
+                dataKey='source_b'
+                fill={theme.palette.sourceB.main}
+                name='Etsy Sales ($)'
+              />
+              {chartConfig.annotations.map((annotation, index) => (
+                <ReferenceLine
+                  key={index}
+                  x={annotation.x}
+                  y={annotation.y}
+                  stroke={annotation.color}
+                  label={{
+                    value: annotation.text,
+                    position: "top",
+                    fill: annotation.color,
+                  }}
+                />
+              ))}
+            </BarChart>
+          )}
         </ResponsiveContainer>
       </Paper>
     );
   };
 
+  // Add CSV export functionality
+  const handleExportCSV = () => {
+    const filteredData = filterAndSortData(orders);
+    const headers = ["Order ID", "Date", "Amount", "Category", "Source"];
+    const csvContent = [
+      headers.join(","),
+      ...filteredData.map((order) =>
+        [
+          order.order_id,
+          new Date(order.order_date).toLocaleDateString(),
+          order.total_amount.toFixed(2),
+          order.product_category,
+          order.source === "source_a" ? "Shopify" : "Etsy",
+        ].join(","),
+      ),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `sales_data_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Add print functionality
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <Box>
+      <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end", gap: 2 }}>
+        <Button
+          variant='contained'
+          onClick={handlePrint}
+          startIcon={<PrintIcon />}
+        >
+          Print Report
+        </Button>
+      </Box>
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2}>
@@ -556,42 +766,71 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
           </Grid>
 
           {filters.dateRange === "custom" && (
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={8}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <Stack spacing={2}>
-                  <DatePicker
-                    label='Start Date'
-                    value={filters.startDate}
-                    onChange={(newValue) => {
-                      setFilters({
-                        ...filters,
-                        startDate: newValue,
-                      });
-                    }}
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true,
-                      },
-                    }}
-                  />
-                  <DatePicker
-                    label='End Date'
-                    value={filters.endDate}
-                    onChange={(newValue) => {
-                      setFilters({
-                        ...filters,
-                        endDate: newValue,
-                      });
-                    }}
-                    minDate={filters.startDate || undefined}
-                    slotProps={{
-                      textField: {
-                        size: "small",
-                        fullWidth: true,
-                      },
-                    }}
-                  />
+                  <Box>
+                    <DatePicker
+                      label='Start Date'
+                      value={filters.startDate}
+                      onChange={(newValue) => {
+                        setFilters({
+                          ...filters,
+                          startDate: newValue,
+                        });
+                      }}
+                      slotProps={{
+                        textField: {
+                          size: "small",
+                          fullWidth: true,
+                        },
+                      }}
+                    />
+                    {taskStartDate && (
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ ml: 1 }}
+                      >
+                        Task Selected start date:{" "}
+                        {new Date(taskStartDate).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Box>
+                    <DatePicker
+                      label='End Date'
+                      value={filters.endDate}
+                      onChange={(newValue) => {
+                        setFilters({
+                          ...filters,
+                          endDate: newValue,
+                        });
+                      }}
+                      minDate={filters.startDate || undefined}
+                      slotProps={{
+                        textField: {
+                          size: "small",
+                          fullWidth: true,
+                        },
+                      }}
+                    />
+                    {taskEndDate && (
+                      <Typography
+                        variant='caption'
+                        color='text.secondary'
+                        sx={{ ml: 1 }}
+                      >
+                        Task Selected end date:{" "}
+                        {new Date(taskEndDate).toLocaleDateString()}
+                      </Typography>
+                    )}
+                  </Box>
+                  {!taskStartDate && !taskEndDate && (
+                    <Typography variant='caption' color='text.secondary'>
+                      No date range was specified when creating this task
+                    </Typography>
+                  )}
                 </Stack>
               </LocalizationProvider>
             </Grid>
@@ -762,6 +1001,15 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
         {/* Detailed Data Table */}
         <Grid item xs={12}>
+          <Box sx={{ mb: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              variant='contained'
+              onClick={handleExportCSV}
+              startIcon={<FileDownloadIcon />}
+            >
+              Export CSV
+            </Button>
+          </Box>
           {renderDetailedDataTable()}
         </Grid>
       </Grid>

@@ -10,7 +10,6 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  Chip,
   Button,
   FormControl,
   InputLabel,
@@ -26,8 +25,7 @@ import SalesTable from "../components/SalesTable.tsx";
 import { useNavigate } from "react-router-dom";
 import { Order, Task } from "../types.ts";
 import CategorySummary from "../components/CategorySummary.tsx";
-import TaskProgress, { TaskStatus } from "../components/TaskProgress.tsx";
-import config from "../config.ts";
+import TaskProgress from "../components/TaskProgress.tsx";
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -41,10 +39,7 @@ const Dashboard: React.FC = () => {
     const fetchTasksData = async () => {
       try {
         const tasksData = await fetchTasks();
-        // Filter out tasks that are not completed
-        const completedTasks = tasksData.filter(
-          (task) => task.status === "completed",
-        );
+
         setTasks(tasksData);
         if (tasksData.length > 0) {
           if (!selectedTaskId) {

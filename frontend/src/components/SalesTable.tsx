@@ -9,8 +9,11 @@ import {
   Paper,
   styled,
   TableSortLabel,
+  Button,
+  Box,
 } from "@mui/material";
 import { Order } from "../types";
+import DownloadIcon from "@mui/icons-material/Download";
 
 interface SalesTableProps {
   orders: Order[];
@@ -114,8 +117,69 @@ const SalesTable: React.FC<SalesTableProps> = ({ orders }) => {
     return 0;
   });
 
+  // Add CSV export function
+  const exportToCSV = () => {
+    // Define CSV headers
+    const headers = [
+      "Order ID",
+      "Source",
+      "Date",
+      "Product",
+      "Category",
+      "Quantity",
+      "Unit Price",
+      "Total Amount",
+      "Customer",
+      "Country",
+    ];
+
+    // Convert orders to CSV rows
+    const csvRows = sortedOrders.map((order) => [
+      order.order_id,
+      order.source === "source_a" ? "Shopify" : "Etsy",
+      new Date(order.order_date).toLocaleString(),
+      order.product_name,
+      order.product_category,
+      order.quantity,
+      order.unit_price.toFixed(2),
+      order.total_amount.toFixed(2),
+      order.customer_id,
+      order.customer_country,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `sales_data_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <Paper>
+      <Box sx={{ p: 2, display: "flex", justifyContent: "flex-end" }}>
+        <Button
+          variant='contained'
+          startIcon={<DownloadIcon />}
+          onClick={exportToCSV}
+          color='primary'
+        >
+          Export to CSV
+        </Button>
+      </Box>
       <StyledTableContainer>
         <Table stickyHeader>
           <TableHead>

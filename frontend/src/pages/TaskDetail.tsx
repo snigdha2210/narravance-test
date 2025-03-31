@@ -126,7 +126,12 @@ const TaskDetail: React.FC = () => {
           )}
         </Paper>
 
-        <TaskDataVisualization taskId={task.id} orders={orders} />
+        <TaskDataVisualization
+          taskId={task.id}
+          orders={orders}
+          taskEndDate={task.date_to}
+          taskStartDate={task.date_from}
+        />
       </>
     );
   };

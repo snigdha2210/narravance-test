@@ -47,9 +47,9 @@ export interface Task {
   id: number;
   title: string;
   description: string;
-  status: string;
+  status: "pending" | "in_progress" | "completed";
   created_at: string;
-  completed_at: string | null;
+  completed_at: string;
   date_from: string;
   date_to: string;
   source_a_enabled: boolean;
