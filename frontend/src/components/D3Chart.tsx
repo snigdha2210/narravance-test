@@ -84,8 +84,46 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
+      let color: d3.ScaleOrdinal<string, string>;
+
       if (type === "pie") {
-        // Create pie chart with better positioning
+        // Pie: unique color per category in data
+        const categories = data.map((d) => String(d[xKey]));
+        color = d3
+          .scaleOrdinal<string>()
+          .domain(categories)
+          .range(d3.schemeCategory10);
+      } else if (type === "line" || type === "area") {
+        // Line/Area: Only 2 colors for source_a vs. source_b
+        color = d3
+          .scaleOrdinal<string>()
+          .domain(["source_a", "source_b"])
+          .range(["steelblue", "orange"]);
+      } else if (type === "bar") {
+        // Bar: If it's category-based (no date), each category gets a color
+        //      If date-based, we assume 2 sources (like the line chart).
+        if (!data[0]?.date) {
+          // Category-based bar chart
+          const categories = data.map((d) => String(d[xKey]));
+          color = d3
+            .scaleOrdinal<string>()
+            .domain(categories)
+            .range(d3.schemeCategory10);
+        } else {
+          // Date-based bar chart with yKeys = [source_a, source_b]
+          color = d3
+            .scaleOrdinal<string>()
+            .domain(["source_a", "source_b"])
+            .range(["steelblue", "orange"]);
+        }
+      } else {
+        // Fallback (just in case)
+        color = d3.scaleOrdinal(d3.schemeCategory10);
+      }
+      // ---------------------------------------------------------------------
+
+      if (type === "pie") {
+        // Create pie chart
         const radius = Math.min(innerWidth, innerHeight) / 1.5;
         const pieG = g
           .append("g")
@@ -109,18 +147,15 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           .innerRadius(radius * 0.6)
           .outerRadius(radius * 0.6);
 
-        const color = d3.scaleOrdinal(d3.schemeCategory10);
-
         const pieData = pie(data);
 
-        // Add pie segments with hover effects
         pieG
           .selectAll("path")
           .data(pieData)
           .enter()
           .append("path")
           .attr("d", arc)
-          .attr("fill", (_, i) => color(i.toString()))
+          .attr("fill", (d) => color(String(d.data[xKey]))) // color by category
           .attr("stroke", "white")
           .style("stroke-width", "2px")
           .style("opacity", 0.8)
@@ -166,7 +201,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
             tooltip.style("visibility", "hidden");
           });
 
-        // Add labels with better positioning
+        // Add labels
         pieG
           .selectAll("text")
           .data(pieData)
@@ -187,7 +222,6 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           });
       } else {
         const yKeys = Array.isArray(yKey) ? yKey : [yKey];
-        const color = d3.scaleOrdinal(d3.schemeCategory10);
 
         // Create scales
         const xScale =
@@ -228,37 +262,33 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           .select(".domain")
           .remove();
 
-        // Update the x-axis creation with proper type handling
+        // X-axis
         if (type === "bar") {
-          // Handle bar chart x-axis
           if (!data[0]?.date) {
             const bandScale = xScale as d3.ScaleBand<string>;
-            const barXAxis = d3.axisBottom(bandScale);
-
             g.selectAll(".x-axis").remove();
             g.append("g")
               .attr("class", "x-axis")
               .attr("transform", `translate(0,${innerHeight})`)
-              .call(barXAxis)
+              .call(d3.axisBottom(bandScale))
               .selectAll("text")
               .style("text-anchor", "end")
               .attr("dx", "-.8em")
               .attr("dy", ".15em")
               .attr("transform", "rotate(-45)");
           } else {
-            // Handle time-based bar chart x-axis
             const timeScale = xScale as d3.ScaleTime<number, number>;
             const dateFormatter = d3.timeFormat("%b %d, %Y");
-            const timeXAxis = d3
-              .axisBottom(timeScale)
-              .ticks(4)
-              .tickFormat((d) => dateFormatter(d as Date));
-
             g.selectAll(".x-axis").remove();
             g.append("g")
               .attr("class", "x-axis")
               .attr("transform", `translate(0,${innerHeight})`)
-              .call(timeXAxis)
+              .call(
+                d3
+                  .axisBottom(timeScale)
+                  .ticks(4)
+                  .tickFormat((d) => dateFormatter(d as Date)),
+              )
               .selectAll("text")
               .style("text-anchor", "end")
               .attr("dx", "-.8em")
@@ -266,19 +296,18 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
               .attr("transform", "rotate(-45)");
           }
         } else {
-          // Handle time-based x-axis
           const timeScale = xScale as d3.ScaleTime<number, number>;
           const dateFormatter = d3.timeFormat("%b %d, %Y");
-          const timeXAxis = d3
-            .axisBottom(timeScale)
-            .ticks(4)
-            .tickFormat((d) => dateFormatter(d as Date));
-
           g.selectAll(".x-axis").remove();
           g.append("g")
             .attr("class", "x-axis")
             .attr("transform", `translate(0,${innerHeight})`)
-            .call(timeXAxis)
+            .call(
+              d3
+                .axisBottom(timeScale)
+                .ticks(4)
+                .tickFormat((d) => dateFormatter(d as Date)),
+            )
             .selectAll("text")
             .style("text-anchor", "end")
             .attr("dx", "-.8em")
@@ -286,7 +315,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
             .attr("transform", "rotate(-45)");
         }
 
-        // Add y-axis with more space for labels
+        // Y-axis
         g.append("g")
           .call(
             d3.axisLeft(yScale).tickFormat((d) => {
@@ -300,7 +329,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           .style("font-size", "12px")
           .attr("dx", "-0.5em");
 
-        // Add y-axis label with adjusted position
+        // Y-axis label
         g.append("text")
           .attr("transform", "rotate(-90)")
           .attr("x", -innerHeight / 2)
@@ -309,6 +338,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           .style("font-size", "14px")
           .text(yLabel || "Sales ($)");
 
+        // Draw bars, lines, or areas
         if (type === "bar") {
           const barWidth = 10; // Fixed bar width for time-based bars
 
@@ -320,6 +350,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
               .attr("class", key)
               .attr("x", (d) => {
                 if (!d.date) {
+                  // Category-based
                   const xBandScale = xScale as d3.ScaleBand<string>;
                   const xPos = xBandScale(String(d[xKey]));
                   return (
@@ -327,6 +358,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
                     (xBandScale.bandwidth() / yKeys.length) * index
                   );
                 } else {
+                  // Date-based
                   const timeScale = xScale as d3.ScaleTime<number, number>;
                   return (
                     timeScale(parseDate(d[xKey] as string)) -
@@ -345,7 +377,11 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
                   : barWidth * 0.9,
               )
               .attr("height", (d) => innerHeight - yScale(Number(d[key]) || 0))
-              .attr("fill", color(index.toString()))
+
+              .attr("fill", (d) =>
+                !d.date ? color(String(d[xKey])) : color(key),
+              )
+
               .attr("opacity", 0.8)
               .on("mouseover", function (event, d) {
                 d3.select(this).transition().duration(200).attr("opacity", 1);
@@ -384,7 +420,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
               });
           });
         } else {
-          // Line and Area charts
+          // Line/Area charts
           yKeys.forEach((key, index) => {
             const line = d3
               .line<D3ChartData>()
@@ -408,23 +444,21 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
                 .y1((d) => yScale(Number(d[key]) || 0))
                 .curve(d3.curveMonotoneX);
 
-              // Add area
               g.append("path")
                 .datum(data)
-                .attr("fill", color(index.toString()))
+                .attr("fill", color(key))
                 .attr("fill-opacity", 0.2)
                 .attr("d", area);
             }
 
-            // Add line
             g.append("path")
               .datum(data)
               .attr("fill", "none")
-              .attr("stroke", color(index.toString()))
+              .attr("stroke", color(key))
               .attr("stroke-width", 2)
               .attr("d", line);
 
-            // Add dots for interaction
+            // Dots
             g.selectAll(`circle.${key}`)
               .data(data)
               .enter()
@@ -437,7 +471,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
               )
               .attr("cy", (d) => yScale(Number(d[key]) || 0))
               .attr("r", type === "line" ? 4 : 0)
-              .attr("fill", color(index.toString()))
+              .attr("fill", color(key))
               .attr("stroke", "white")
               .attr("stroke-width", 2)
               .style("opacity", type === "line" ? 0.8 : 0)
@@ -489,7 +523,6 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           });
         }
 
-        // Add legend only if we have multiple sources
         if (yKeys.length > 1) {
           const legend = g
             .append("g")
@@ -510,7 +543,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
             .attr("x", 0)
             .attr("width", 19)
             .attr("height", 19)
-            .attr("fill", (d, i) => color(i.toString()));
+            .attr("fill", (d) => color(d));
 
           legend
             .append("text")
