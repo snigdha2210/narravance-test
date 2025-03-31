@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -8,11 +8,21 @@ import {
   TableRow,
   Paper,
   styled,
+  TableSortLabel,
 } from "@mui/material";
 import { Order } from "../types";
 
 interface SalesTableProps {
   orders: Order[];
+}
+
+// Add type for sort order
+type SortOrder = "asc" | "desc";
+
+// Add interface for table sorting
+interface TableSortConfig {
+  field: keyof Order;
+  order: SortOrder;
 }
 
 const StyledTableHeaderCell = styled(TableCell)(({ theme }) => ({
@@ -62,33 +72,185 @@ const StyledTableRow = styled(TableRow)<{ source: string }>(
 );
 
 const SalesTable: React.FC<SalesTableProps> = ({ orders }) => {
+  // Add state for sorting
+  const [sortConfig, setSortConfig] = useState<TableSortConfig>({
+    field: "order_date",
+    order: "desc",
+  });
+
+  // Add sorting function
+  const handleSort = (field: keyof Order) => {
+    setSortConfig({
+      field,
+      order:
+        sortConfig.field === field && sortConfig.order === "asc"
+          ? "desc"
+          : "asc",
+    });
+  };
+
+  // Add sorting logic
+  const sortedOrders = [...orders].sort((a, b) => {
+    const aValue = a[sortConfig.field];
+    const bValue = b[sortConfig.field];
+
+    if (typeof aValue === "string" && typeof bValue === "string") {
+      return sortConfig.order === "asc"
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+
+    if (typeof aValue === "number" && typeof bValue === "number") {
+      return sortConfig.order === "asc" ? aValue - bValue : bValue - aValue;
+    }
+
+    // Handle dates
+    if (sortConfig.field === "order_date") {
+      const aDate = new Date(aValue as string).getTime();
+      const bDate = new Date(bValue as string).getTime();
+      return sortConfig.order === "asc" ? aDate - bDate : bDate - aDate;
+    }
+
+    return 0;
+  });
+
   return (
     <Paper>
       <StyledTableContainer>
         <Table stickyHeader>
           <TableHead>
             <TableRow>
-              <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Source</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Date</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Product</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Category</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Quantity</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Unit Price</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Total Amount</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Customer</StyledTableHeaderCell>
-              <StyledTableHeaderCell>Country</StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "order_id"}
+                  direction={
+                    sortConfig.field === "order_id" ? sortConfig.order : "asc"
+                  }
+                  onClick={() => handleSort("order_id")}
+                >
+                  Order ID
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "source"}
+                  direction={
+                    sortConfig.field === "source" ? sortConfig.order : "asc"
+                  }
+                  onClick={() => handleSort("source")}
+                >
+                  Source
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "order_date"}
+                  direction={
+                    sortConfig.field === "order_date" ? sortConfig.order : "asc"
+                  }
+                  onClick={() => handleSort("order_date")}
+                >
+                  Date
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "product_name"}
+                  direction={
+                    sortConfig.field === "product_name"
+                      ? sortConfig.order
+                      : "asc"
+                  }
+                  onClick={() => handleSort("product_name")}
+                >
+                  Product
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "product_category"}
+                  direction={
+                    sortConfig.field === "product_category"
+                      ? sortConfig.order
+                      : "asc"
+                  }
+                  onClick={() => handleSort("product_category")}
+                >
+                  Category
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "quantity"}
+                  direction={
+                    sortConfig.field === "quantity" ? sortConfig.order : "asc"
+                  }
+                  onClick={() => handleSort("quantity")}
+                >
+                  Quantity
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "unit_price"}
+                  direction={
+                    sortConfig.field === "unit_price" ? sortConfig.order : "asc"
+                  }
+                  onClick={() => handleSort("unit_price")}
+                >
+                  Unit Price
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "total_amount"}
+                  direction={
+                    sortConfig.field === "total_amount"
+                      ? sortConfig.order
+                      : "asc"
+                  }
+                  onClick={() => handleSort("total_amount")}
+                >
+                  Total Amount
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "customer_id"}
+                  direction={
+                    sortConfig.field === "customer_id"
+                      ? sortConfig.order
+                      : "asc"
+                  }
+                  onClick={() => handleSort("customer_id")}
+                >
+                  Customer
+                </TableSortLabel>
+              </StyledTableHeaderCell>
+              <StyledTableHeaderCell>
+                <TableSortLabel
+                  active={sortConfig.field === "customer_country"}
+                  direction={
+                    sortConfig.field === "customer_country"
+                      ? sortConfig.order
+                      : "asc"
+                  }
+                  onClick={() => handleSort("customer_country")}
+                >
+                  Country
+                </TableSortLabel>
+              </StyledTableHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {orders.map((order) => (
+            {sortedOrders.map((order) => (
               <StyledTableRow
                 key={`${order.source}-${order.order_id}`}
                 source={order.source}
               >
                 <TableCell>{order.order_id}</TableCell>
                 <TableCell>
-                  {order.source === "source_a" ? "Source A" : "Source B"}
+                  {order.source === "source_a" ? "Shopify" : "Etsy"}
                 </TableCell>
                 <TableCell>
                   {new Date(order.order_date).toLocaleString()}

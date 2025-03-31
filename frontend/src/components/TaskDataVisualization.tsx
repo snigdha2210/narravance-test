@@ -14,9 +14,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   styled,
   useTheme,
   Stack,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import {
   LineChart,
@@ -26,19 +29,23 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceArea,
+  ReferenceLine,
 } from "recharts";
-import { Order } from "../types";
+import { Order as OrderData } from "../types";
 import { styled as muiStyled, alpha } from "@mui/material/styles";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 
 interface TaskDataVisualizationProps {
   taskId: number;
-  orders: Order[];
+  orders: OrderData[];
 }
 
 const StyledTableRow = styled(TableRow)(({ theme }) => ({
@@ -81,6 +88,15 @@ const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   },
 }));
 
+// Add type for sort order
+type SortOrder = "asc" | "desc";
+
+// Add interface for table sorting
+interface TableSortConfig {
+  field: keyof OrderData;
+  order: SortOrder;
+}
+
 const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
   taskId,
   orders,
@@ -94,7 +110,24 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     endDate: null as Date | null,
   });
 
-  const filterData = (data: Order[]) => {
+  // Add states for sorting and interactivity
+  const [sortConfig, setSortConfig] = useState<TableSortConfig>({
+    field: "order_date",
+    order: "desc",
+  });
+  const [expandedChart, setExpandedChart] = useState<string | null>(null);
+  const [selectedDataPoint, setSelectedDataPoint] = useState<any>(null);
+
+  // Add new state for source table sorting
+  const [sourceTableSort, setSourceTableSort] = useState<{
+    field: string;
+    order: SortOrder;
+  }>({
+    field: "total",
+    order: "desc",
+  });
+
+  const filterData = (data: OrderData[]) => {
     const filtered = data.filter((order) => {
       const orderDate = new Date(order.order_date);
       const now = new Date();
@@ -124,7 +157,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     return filtered;
   };
 
-  const prepareTimeSeriesData = (orders: Order[]) => {
+  const prepareTimeSeriesData = (orders: OrderData[]) => {
     const timeSeriesData = orders.map((order) => ({
       date: new Date(order.order_date),
       amount: order.total_amount,
@@ -158,7 +191,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     return result;
   };
 
-  const prepareCategoryData = (orders: Order[]) => {
+  const prepareCategoryData = (orders: OrderData[]) => {
     const categoryData = orders.reduce((acc, order) => {
       const category = order.product_category;
       if (!acc[category]) {
@@ -179,7 +212,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     return Object.values(categoryData);
   };
 
-  const prepareSourceData = (orders: Order[]) => {
+  const prepareSourceData = (orders: OrderData[]) => {
     const sourceData = orders.reduce((acc, order) => {
       const source = order.source;
       if (!acc[source]) {
@@ -199,18 +232,298 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
     return Object.values(sourceData);
   };
 
-  const prepareDetailedTableData = (orders: Order[]) => {
+  const prepareDetailedTableData = (orders: OrderData[]) => {
     return orders.map((order) => ({
       ...order,
       source_specific_data: JSON.parse(order.source_specific_data),
     }));
   };
 
-  const filteredOrders = filterData(orders);
-  const timeSeriesData = prepareTimeSeriesData(filteredOrders);
-  const categoryData = prepareCategoryData(filteredOrders);
-  const sourceData = prepareSourceData(filteredOrders);
-  const detailedTableData = prepareDetailedTableData(filteredOrders);
+  // Add sorting function
+  const handleSort = (field: keyof OrderData) => {
+    setSortConfig({
+      field,
+      order:
+        sortConfig.field === field && sortConfig.order === "asc"
+          ? "desc"
+          : "asc",
+    });
+  };
+
+  // Add sorting function for source table
+  const handleSourceTableSort = (field: string) => {
+    setSourceTableSort({
+      field,
+      order:
+        sourceTableSort.field === field && sourceTableSort.order === "asc"
+          ? "desc"
+          : "asc",
+    });
+  };
+
+  // Add sorting logic to filterData
+  const filterAndSortData = (data: OrderData[]) => {
+    const filtered = filterData(data);
+    return filtered.sort((a, b) => {
+      const aValue = a[sortConfig.field];
+      const bValue = b[sortConfig.field];
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortConfig.order === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortConfig.order === "asc" ? aValue - bValue : bValue - aValue;
+      }
+
+      // Handle dates by converting to timestamps
+      if (sortConfig.field === "order_date") {
+        const aDate = new Date(aValue as string).getTime();
+        const bDate = new Date(bValue as string).getTime();
+        return sortConfig.order === "asc" ? aDate - bDate : bDate - aDate;
+      }
+
+      return 0;
+    });
+  };
+
+  // Add sorting logic for source data
+  const sortSourceData = (
+    data: Array<{
+      source: string;
+      total: number;
+      orders: number;
+      averageOrderValue: number;
+    }>,
+  ) => {
+    return [...data].sort((a, b) => {
+      const aValue = a[sourceTableSort.field as keyof typeof a];
+      const bValue = b[sourceTableSort.field as keyof typeof b];
+
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sourceTableSort.order === "asc"
+          ? aValue - bValue
+          : bValue - aValue;
+      }
+
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sourceTableSort.order === "asc"
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  // Add custom tooltip component for charts
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: Array<{
+      name: string;
+      value: number;
+      color: string;
+    }>;
+    label?: string;
+  }
+
+  const CustomTooltip: React.FC<CustomTooltipProps> = ({
+    active,
+    payload,
+    label,
+  }) => {
+    if (active && payload && payload.length) {
+      return (
+        <Paper sx={{ p: 2, backgroundColor: "rgba(255, 255, 255, 0.9)" }}>
+          <Typography variant='body2' color='textSecondary'>
+            Date: {new Date(label || "").toLocaleDateString()}
+          </Typography>
+          {payload.map((entry) => (
+            <Typography
+              key={entry.name}
+              variant='body2'
+              color='textPrimary'
+              sx={{ color: entry.color }}
+            >
+              {entry.name}: ${entry.value.toFixed(2)}
+            </Typography>
+          ))}
+        </Paper>
+      );
+    }
+    return null;
+  };
+
+  // Modify the detailed data table to include sorting
+  const renderDetailedDataTable = () => (
+    <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400 }}>
+      <Table stickyHeader>
+        <TableHead>
+          <TableRow>
+            <StyledTableHeaderCell>
+              <TableSortLabel
+                active={sortConfig.field === "order_id"}
+                direction={
+                  sortConfig.field === "order_id" ? sortConfig.order : "asc"
+                }
+                onClick={() => handleSort("order_id")}
+              >
+                Order ID
+              </TableSortLabel>
+            </StyledTableHeaderCell>
+            <StyledTableHeaderCell>
+              <TableSortLabel
+                active={sortConfig.field === "order_date"}
+                direction={
+                  sortConfig.field === "order_date" ? sortConfig.order : "asc"
+                }
+                onClick={() => handleSort("order_date")}
+              >
+                Date
+              </TableSortLabel>
+            </StyledTableHeaderCell>
+            <StyledTableHeaderCell>
+              <TableSortLabel
+                active={sortConfig.field === "total_amount"}
+                direction={
+                  sortConfig.field === "total_amount" ? sortConfig.order : "asc"
+                }
+                onClick={() => handleSort("total_amount")}
+              >
+                Amount
+              </TableSortLabel>
+            </StyledTableHeaderCell>
+            <StyledTableHeaderCell>
+              <TableSortLabel
+                active={sortConfig.field === "product_category"}
+                direction={
+                  sortConfig.field === "product_category"
+                    ? sortConfig.order
+                    : "asc"
+                }
+                onClick={() => handleSort("product_category")}
+              >
+                Category
+              </TableSortLabel>
+            </StyledTableHeaderCell>
+            <StyledTableHeaderCell>
+              <TableSortLabel
+                active={sortConfig.field === "source"}
+                direction={
+                  sortConfig.field === "source" ? sortConfig.order : "asc"
+                }
+                onClick={() => handleSort("source")}
+              >
+                Source
+              </TableSortLabel>
+            </StyledTableHeaderCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {filterAndSortData(orders).map((order) => (
+            <StyledTableRow
+              key={order.order_id}
+              className={order.source === "source_a" ? "source-a" : "source-b"}
+            >
+              <TableCell>{order.order_id}</TableCell>
+              <TableCell>
+                {new Date(order.order_date).toLocaleDateString()}
+              </TableCell>
+              <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+              <TableCell>{order.product_category}</TableCell>
+              <TableCell>
+                {order.source === "source_a" ? "Shopify" : "Etsy"}
+              </TableCell>
+            </StyledTableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+
+  // Modify the time series chart to be more interactive
+  const renderTimeSeriesChart = () => {
+    const data = prepareTimeSeriesData(filterData(orders));
+    return (
+      <Paper sx={{ p: 2, position: "relative" }}>
+        <Box
+          display='flex'
+          justifyContent='space-between'
+          alignItems='center'
+          mb={2}
+        >
+          <Typography variant='h6'>Sales Over Time</Typography>
+          <Tooltip
+            title={
+              expandedChart === "timeSeries"
+                ? "Exit Fullscreen"
+                : "Enter Fullscreen"
+            }
+          >
+            <IconButton
+              onClick={() =>
+                setExpandedChart(
+                  expandedChart === "timeSeries" ? null : "timeSeries",
+                )
+              }
+            >
+              {expandedChart === "timeSeries" ? (
+                <FullscreenExitIcon />
+              ) : (
+                <FullscreenIcon />
+              )}
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <ResponsiveContainer
+          width='100%'
+          height={expandedChart === "timeSeries" ? 600 : 300}
+        >
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray='3 3' />
+            <XAxis
+              dataKey='date'
+              tickFormatter={(date) => new Date(date).toLocaleDateString()}
+            />
+            <YAxis />
+            <RechartsTooltip content={<CustomTooltip />} />
+            <Legend />
+            {selectedDataPoint && (
+              <ReferenceLine
+                x={selectedDataPoint.date}
+                stroke={theme.palette.primary.main}
+                strokeDasharray='3 3'
+              />
+            )}
+            <Line
+              type='monotone'
+              dataKey='source_a'
+              stroke={theme.palette.sourceA.main}
+              name='Shopify Sales ($)'
+              dot={{ r: 4 }}
+              activeDot={{
+                r: 8,
+                onClick: (data) => setSelectedDataPoint(data.payload),
+              }}
+            />
+            <Line
+              type='monotone'
+              dataKey='source_b'
+              stroke={theme.palette.sourceB.main}
+              name='Etsy Sales ($)'
+              dot={{ r: 4 }}
+              activeDot={{
+                r: 8,
+                onClick: (data) => setSelectedDataPoint(data.payload),
+              }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </Paper>
+    );
+  };
 
   return (
     <Box>
@@ -329,32 +642,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       <Grid container spacing={3}>
         {/* Time Series Chart */}
         <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
-            <Typography variant='h6' gutterBottom>
-              Sales Over Time
-            </Typography>
-            <ResponsiveContainer width='100%' height={300}>
-              <LineChart data={timeSeriesData}>
-                <CartesianGrid strokeDasharray='3 3' />
-                <XAxis dataKey='date' />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type='monotone'
-                  dataKey='source_a'
-                  stroke={theme.palette.sourceA.main}
-                  name='Shopify Sales ($)'
-                />
-                <Line
-                  type='monotone'
-                  dataKey='source_b'
-                  stroke={theme.palette.sourceB.main}
-                  name='Etsy Sales ($)'
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </Paper>
+          {renderTimeSeriesChart()}
         </Grid>
 
         {/* Category Distribution */}
@@ -364,11 +652,11 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               Sales by Category
             </Typography>
             <ResponsiveContainer width='100%' height={300}>
-              <BarChart data={categoryData}>
+              <BarChart data={prepareCategoryData(orders)}>
                 <CartesianGrid strokeDasharray='3 3' />
                 <XAxis dataKey='category' />
                 <YAxis />
-                <Tooltip />
+                <RechartsTooltip content={<CustomTooltip />} />
                 <Legend />
                 <Bar
                   dataKey='source_a'
@@ -395,14 +683,64 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>Source</TableCell>
-                    <TableCell align='right'>Total Sales ($)</TableCell>
-                    <TableCell align='right'>Orders</TableCell>
-                    <TableCell align='right'>Avg. Order Value ($)</TableCell>
+                    <TableCell>
+                      <TableSortLabel
+                        active={sourceTableSort.field === "source"}
+                        direction={
+                          sourceTableSort.field === "source"
+                            ? sourceTableSort.order
+                            : "asc"
+                        }
+                        onClick={() => handleSourceTableSort("source")}
+                      >
+                        Source
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align='right'>
+                      <TableSortLabel
+                        active={sourceTableSort.field === "total"}
+                        direction={
+                          sourceTableSort.field === "total"
+                            ? sourceTableSort.order
+                            : "asc"
+                        }
+                        onClick={() => handleSourceTableSort("total")}
+                      >
+                        Total Sales ($)
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align='right'>
+                      <TableSortLabel
+                        active={sourceTableSort.field === "orders"}
+                        direction={
+                          sourceTableSort.field === "orders"
+                            ? sourceTableSort.order
+                            : "asc"
+                        }
+                        onClick={() => handleSourceTableSort("orders")}
+                      >
+                        Orders
+                      </TableSortLabel>
+                    </TableCell>
+                    <TableCell align='right'>
+                      <TableSortLabel
+                        active={sourceTableSort.field === "averageOrderValue"}
+                        direction={
+                          sourceTableSort.field === "averageOrderValue"
+                            ? sourceTableSort.order
+                            : "asc"
+                        }
+                        onClick={() =>
+                          handleSourceTableSort("averageOrderValue")
+                        }
+                      >
+                        Avg. Order Value ($)
+                      </TableSortLabel>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {sourceData.map((source) => (
+                  {sortSourceData(prepareSourceData(orders)).map((source) => (
                     <TableRow key={source.source}>
                       <TableCell>
                         {source.source === "source_a" ? "Shopify" : "Etsy"}
@@ -424,39 +762,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 
         {/* Detailed Data Table */}
         <Grid item xs={12}>
-          <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 400 }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow>
-                  <StyledTableHeaderCell>Order ID</StyledTableHeaderCell>
-                  <StyledTableHeaderCell>Date</StyledTableHeaderCell>
-                  <StyledTableHeaderCell>Amount</StyledTableHeaderCell>
-                  <StyledTableHeaderCell>Category</StyledTableHeaderCell>
-                  <StyledTableHeaderCell>Source</StyledTableHeaderCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filterData(orders).map((order) => (
-                  <StyledTableRow
-                    key={order.order_id}
-                    className={
-                      order.source === "source_a" ? "source-a" : "source-b"
-                    }
-                  >
-                    <TableCell>{order.order_id}</TableCell>
-                    <TableCell>
-                      {new Date(order.order_date).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>${order.total_amount.toFixed(2)}</TableCell>
-                    <TableCell>{order.product_category}</TableCell>
-                    <TableCell>
-                      {order.source === "source_a" ? "Shopify" : "Etsy"}
-                    </TableCell>
-                  </StyledTableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {renderDetailedDataTable()}
         </Grid>
       </Grid>
     </Box>
