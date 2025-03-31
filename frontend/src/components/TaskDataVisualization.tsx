@@ -87,7 +87,7 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
 }) => {
   const theme = useTheme();
   const [filters, setFilters] = useState({
-    dateRange: "custom" as "all" | "30days" | "custom",
+    dateRange: "all" as "all" | "30days" | "custom",
     source: "all",
     category: "all",
     startDate: null as Date | null,
