@@ -22,6 +22,7 @@ interface D3ChartProps {
   height?: number;
   margin?: { top: number; right: number; bottom: number; left: number };
   dateRange?: { start: Date; end: Date };
+  yLabel?: string;
 }
 
 const DEFAULT_DATE_RANGE = {
@@ -46,6 +47,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
       height = 500,
       margin = { top: 40, right: 120, bottom: 100, left: 100 },
       dateRange = DEFAULT_DATE_RANGE,
+      yLabel,
     },
     ref,
   ) => {
@@ -305,7 +307,7 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
           .attr("y", -margin.left + 45)
           .attr("text-anchor", "middle")
           .style("font-size", "14px")
-          .text("Sales ($)");
+          .text(yLabel || "Sales ($)");
 
         if (type === "bar") {
           const barWidth = 10; // Fixed bar width for time-based bars
@@ -527,7 +529,18 @@ const D3Chart = React.forwardRef<HTMLDivElement, D3ChartProps>(
         .style("font-size", "16px")
         .style("font-weight", "bold")
         .text(title);
-    }, [data, type, xKey, yKey, width, height, margin, title, dateRange]);
+    }, [
+      data,
+      type,
+      xKey,
+      yKey,
+      width,
+      height,
+      margin,
+      title,
+      dateRange,
+      yLabel,
+    ]);
 
     return (
       <Paper

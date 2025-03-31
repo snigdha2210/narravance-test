@@ -144,6 +144,9 @@ const CategoryChart: React.FC<CategoryChartProps> = ({
           xKey='category'
           yKey={categoryFilters.sortBy === "amount" ? "amount" : "count"}
           height={400}
+          yLabel={
+            categoryFilters.sortBy === "amount" ? "Sales Amount" : "Order Count"
+          }
         />
       </Paper>
 
