@@ -346,7 +346,11 @@ const TaskDataVisualization: React.FC<TaskDataVisualizationProps> = ({
       return (
         <Paper sx={{ p: 2, backgroundColor: "rgba(255, 255, 255, 0.9)" }}>
           <Typography variant='body2' color='textSecondary'>
-            Date: {formatDateOnlyToEST(label)}
+            {label
+              ? label.includes("-")
+                ? formatDateOnlyToEST(label)
+                : label
+              : ""}
           </Typography>
           {payload.map((entry) => (
             <Typography

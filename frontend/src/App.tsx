@@ -9,7 +9,14 @@ import Dashboard from "./pages/Dashboard.tsx";
 import TaskList from "./pages/TaskList.tsx";
 import TaskDetail from "./pages/TaskDetail.tsx";
 import TaskCreate from "./pages/TaskCreate.tsx";
-import { AppBar, Button, Container, Toolbar, Typography } from "@mui/material";
+import {
+  AppBar,
+  Button,
+  Container,
+  Toolbar,
+  Typography,
+  Box,
+} from "@mui/material";
 
 const App: React.FC = () => {
   return (
@@ -17,8 +24,14 @@ const App: React.FC = () => {
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <CssBaseline />
         <Router>
-          <Container>
-            <AppBar position='static'>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "100vh",
+            }}
+          >
+            <AppBar position='static' sx={{ width: "100%" }}>
               <Toolbar>
                 <Typography variant='h6' component='div' sx={{ flexGrow: 1 }}>
                   E-commerce Analytics
@@ -34,16 +47,16 @@ const App: React.FC = () => {
                 </Button>
               </Toolbar>
             </AppBar>
-          </Container>
 
-          <Container sx={{ mt: 4 }}>
-            <Routes>
-              <Route path='/' element={<Dashboard />} />
-              <Route path='/tasks' element={<TaskList />} />
-              <Route path='/tasks/:id' element={<TaskDetail />} />
-              <Route path='/create' element={<TaskCreate />} />
-            </Routes>
-          </Container>
+            <Container sx={{ mt: 4, mb: 4, flex: 1 }}>
+              <Routes>
+                <Route path='/' element={<Dashboard />} />
+                <Route path='/tasks' element={<TaskList />} />
+                <Route path='/tasks/:id' element={<TaskDetail />} />
+                <Route path='/create' element={<TaskCreate />} />
+              </Routes>
+            </Container>
+          </Box>
         </Router>
       </LocalizationProvider>
     </ThemeProvider>

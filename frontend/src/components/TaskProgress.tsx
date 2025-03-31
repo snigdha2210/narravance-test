@@ -25,16 +25,6 @@ const pulse = keyframes`
   }
 `;
 
-// Define the progress line animation
-const progressLine = keyframes`
-  from {
-    width: 0;
-  }
-  to {
-    width: 90%;
-  }
-`;
-
 const ProgressCircle = styled(Box, {
   shouldForwardProp: (prop) =>
     prop !== "active" && prop !== "completed" && prop !== "step",
