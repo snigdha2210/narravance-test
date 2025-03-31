@@ -69,16 +69,19 @@ const ProgressCircle = styled(Box)<{
 
 const ProgressLine = styled(Box)<{
   active: boolean;
+  completed: boolean;
   size: "small" | "large";
-}>(({ theme, active, size }) => ({
-  height: size === "small" ? 2 : 3,
-  backgroundColor: active
+}>(({ theme, active, completed, size }) => ({
+  height: 2,
+  backgroundColor: completed
+    ? theme.palette.primary.main
+    : active
     ? theme.palette.primary.main
     : theme.palette.grey[300],
   position: "absolute",
   top: size === "small" ? "50%" : "24px",
   transform: "translateY(-50%)",
-  animation: active ? `${progressLine} 1s ease-in-out forwards` : "none",
+  transition: "background-color 0.3s ease",
 }));
 
 const StatusLabel = styled(Typography)<{
@@ -117,7 +120,26 @@ const TaskProgress: React.FC<TaskProgressProps> = ({
         };
       case "pending":
         return {
-          active: step === "pending",
+          active: false,
+          completed: false,
+        };
+      default:
+        return { active: false, completed: false };
+    }
+  };
+
+  const getLineState = (position: "first" | "second") => {
+    switch (status) {
+      case "completed":
+        return { active: false, completed: true };
+      case "in_progress":
+        return {
+          active: position === "first",
+          completed: false,
+        };
+      case "pending":
+        return {
+          active: false,
           completed: false,
         };
       default:
@@ -131,30 +153,24 @@ const TaskProgress: React.FC<TaskProgressProps> = ({
         sx={{
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "flex-start",
+          alignItems: size === "small" ? "center" : "flex-start",
           position: "relative",
           width: "100%",
-          maxWidth: size === "small" ? 200 : 600,
+          maxWidth: size === "small" ? 200 : 400,
           margin: "0 auto",
         }}
       >
         {/* First connecting line */}
         <ProgressLine
           size={size}
-          active={status === "in_progress" || status === "completed"}
-          sx={{
-            left: size === "small" ? "0%" : "0%",
-            width: size === "small" ? "10%" : "10%",
-          }}
+          {...getLineState("first")}
+          sx={{ left: "12%", width: "38%" }}
         />
         {/* Second connecting line */}
         <ProgressLine
           size={size}
-          active={status === "completed"}
-          sx={{
-            left: size === "small" ? "0%" : "0%",
-            width: size === "small" ? "10%" : "10%",
-          }}
+          {...getLineState("second")}
+          sx={{ left: "50%", width: "38%" }}
         />
 
         {/* Pending circle */}
